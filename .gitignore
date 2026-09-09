@@ -1,0 +1,11 @@
+build/
+dist/
+__pycache__/
+*.pyc
+*.xlsx
+.venv/
+
+# Fichas reais de teste - dados pessoais de terceiros, NUNCA versionar
+PDF/
+*.pdf
+*.png

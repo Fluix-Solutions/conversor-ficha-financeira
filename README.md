@@ -1,0 +1,142 @@
+# Conversor de Ficha Financeira (PDF → Excel)
+
+Converte a "Relação Ficha Financeira" (modelo Prefeitura da Serra) em uma
+planilha `.xlsx` com os **Proventos** por mês: uma linha por `Ano + Mês`,
+uma coluna por rubrica (só o nome da verba, sem o código).
+
+## Instalação (uma vez)
+
+1. Instale o [Python](https://www.python.org/downloads/) (marque
+   *"Add Python to PATH"* durante a instalação).
+2. Nesta pasta, instale as dependências:
+
+   ```bash
+   pip install -r requirements.txt
+   ```
+
+## Usar o programa (janela)
+
+Dê um **duplo clique em `Conversor.bat`** (ou no `.exe`, se instalado). Na janela:
+
+1. **Origem da ficha** → campo de pesquisa: digite parte do nome
+   (ex: `serra`) e escolha na lista — **Município da Serra** ou
+   **Estado do Espírito Santo**.
+2. **Abrir PDF...** → escolha a ficha financeira.
+3. **Converter para Excel** → escolha onde salvar.
+
+O programa mostra o resultado e pergunta se quer abrir a planilha. Se a origem
+escolhida não corresponder ao PDF, ele avisa e não converte.
+
+## Usar pela linha de comando (opcional)
+
+```bash
+python converter.py "FF 1.pdf" -t serra
+```
+
+`-t` / `--tipo` é obrigatório: `serra` ou `estado`. Para escolher o nome da
+saída: `python converter.py "FF 1.pdf" -t serra -o "saida.xlsx"`.
+
+## Layouts
+
+A origem é escolhida no seletor; dentro de **Serra** o programa ainda distingue
+sozinho os dois modelos:
+
+**A — Sistema FPFF902 (Serra, recente).** Linhas `001 Salário Base`, um ano por página.
+
+**B — Sistema FPFF102 (Serra, antigo).** Linhas `Evento: 001 Salário Base` + linha
+`Valor` + linha `Ref.` (horas). Um ano ocupa 2+ páginas e a fonte do PDF não
+traz mapa de caracteres — o texto é decodificado por deslocamento fixo.
+Só a linha **Valor** é usada; os meses são deduzidos pela posição de cada número.
+
+**C — SIARHES / PRODEST (Governo do Estado do ES).** Uma página por ano,
+seções **Vantagens** e **Descontos**. A fonte é do tipo Type3 (glifos
+desenhados) e cada página embaralha as letras e os números de um jeito
+diferente. O programa descobre a cifra de cada página cruzando as linhas de
+total (`soma dos 12 meses = coluna Total`, `Total Líquido = Vantagens −
+Descontos`) e comparando o desenho de cada glifo entre as páginas. Todos os
+valores conferem com os totais impressos no PDF.
+
+A planilha tem sempre **uma linha por Ano + Mês**. Se a pessoa teve **mais de um
+contrato (matrícula)** e dois deles pagaram no mesmo mês, os valores da mesma
+verba são **somados**.
+
+## Avisos que o programa pode mostrar
+
+- **`Nome incompleto (acento): NNN '...'`** — o nome da rubrica ficou com `?`
+  no lugar de um acento. Não afeta os valores. Para corrigir o nome, edite a
+  tabela `RUBRICAS_CANONICAS` no início de `converter.py`:
+
+  ```python
+  "161": "Gratif. Direção 3108/2007",
+  ```
+
+## Limitações
+
+- Extrai apenas **Proventos** (não Descontos nem Outros).
+- **PDFs escaneados** (imagem, sem texto) não são suportados — precisariam de
+  OCR. O programa avisa quando detecta esse caso.
+- No layout B, rubricas pagas em poucos meses são posicionadas pela coordenada
+  do número no PDF; convém conferir os meses parciais nas primeiras fichas.
+
+## Versão web (rodar online)
+
+`server.py` é um servidor Flask que serve a mesma interface (pasta `web/`).
+O PDF é convertido **na memória** e o arquivo temporário é apagado logo em
+seguida — nada fica salvo no servidor, e o conteúdo não vai para log.
+
+### Rodar localmente
+
+```bash
+pip install -r requirements.txt
+python server.py            # abre em http://127.0.0.1:8000
+```
+
+### Proteger com senha (recomendado)
+
+Defina as variáveis de ambiente antes de subir:
+
+| Variável | Efeito |
+|---|---|
+| `CONVERSOR_SENHA` | se definida, o site passa a exigir login |
+| `CONVERSOR_USUARIO` | usuário do login (padrão `conversor`) |
+
+### Deploy no Railway
+
+1. Suba a pasta para um repositório GitHub.
+2. No Railway: **New Project → Deploy from GitHub repo**.
+3. O Railway detecta Python, instala o `requirements.txt` e usa o `Procfile`
+   (`gunicorn server:app`). O `runtime.txt` fixa o Python 3.12.
+4. Em **Variables**, defina `CONVERSOR_SENHA` (e opcionalmente `CONVERSOR_USUARIO`).
+5. Pronto — a URL gerada pelo Railway é o conversor online.
+
+Arquivos de deploy: `requirements.txt`, `Procfile`, `runtime.txt`.
+
+## Gerar o `.exe` (para usar sem Python)
+
+Dê um duplo clique em **`construir_exe.bat`** (ou rode
+`python -m PyInstaller --noconfirm Conversor.spec`).
+
+Resultado em `dist/`:
+
+| Arquivo | Para quê |
+|---|---|
+| `Conversor de Ficha Financeira.exe` | O programa (arquivo único, ~55 MB) |
+| `Instalar.bat` | Copia o `.exe` para a conta do usuário e cria atalhos |
+| `Desinstalar.bat` | Remove o que o `Instalar.bat` criou |
+| `LEIA-ME.txt` | Instruções para quem receber o programa |
+
+Distribua a pasta `dist/` inteira (ou só o `.exe`, que já funciona sozinho).
+
+## Arquivos do projeto
+
+| Arquivo | Função |
+|---|---|
+| `converter.py` | Motor da conversão (`python converter.py PDF -t serra\|estado`) |
+| `server.py` + `web/` | Versão web (Flask) |
+| `app_web.py` + `ui/` | App de janela (pywebview, visual Valorizei) |
+| `app.py` | App de janela antigo (Tkinter) — fallback |
+| `Conversor.bat` | Abre o app de janela (duplo clique) |
+| `ConversorWeb.spec` / `construir_exe.bat` | Geram o `.exe` |
+| `requirements.txt` | Deploy web (engine + Flask) |
+| `requirements-desktop.txt` | App de janela (engine + pywebview) |
+| `requirements-base.txt` | Só o motor (`pdfplumber`, `openpyxl`, `pymupdf`) |

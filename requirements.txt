@@ -1,0 +1,4 @@
+# Deploy web (Railway/Render). Instala tudo: engine + servidor.
+-r requirements-base.txt
+flask>=3.0
+gunicorn>=21.0

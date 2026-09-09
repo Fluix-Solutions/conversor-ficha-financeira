@@ -1,0 +1,3 @@
+# App de desktop (janela pywebview).
+-r requirements-base.txt
+pywebview>=6.0
