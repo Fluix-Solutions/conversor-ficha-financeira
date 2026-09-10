@@ -90,16 +90,20 @@ Electron não resolvem — é falta de assinatura de código). Os arquivos de bu
     Proventos, `_eh_cabecalho_meses`); código **colado** no nome →
     `_split_cod` corta o prefixo de glifos-dígito; `_converter_formato_c`
     escolhe o tamanho (2-4) preferindo um código que exista em `RUBRICAS_C`.
-    A **descrição da rubrica não é legível** no PDF (fonte da descrição sem
-    ToUnicode) → o nome vem de `RUBRICAS_C` pelo código. Código novo →
-    aviso "Rubrica NNN: nome não disponível" e coluna `Rubrica NNN`: ler o
-    nome na ficha impressa (`pymupdf` render p/ PNG) e acrescentar em
-    `RUBRICAS_C`. Os **valores** batem com os totais impressos.
-    Códigos já mapeados (proventos): 20,21,24,26,28,119,192,231,248,339,348,
-    494,1010,1025,1040,1110. **339 e 348** = "Bônus Desempenho SEDU" com
-    valores iguais e 348 também espelhado em Descontos (provável estorno) →
-    ficam em colunas separadas (348 rotulado "(cód. 348)"); usuário decide se
-    conta.
+    A **descrição da rubrica não é legível** como texto (fonte sem ToUnicode).
+    Nome vem: (1) de `RUBRICAS_C` pelo código; (2) senão, por **OCR** da
+    imagem da página (`_ocr_rubricas`, rapidocr) - roda só quando falta nome,
+    ~2-12 s/ficha; o OCR também corrige códigos ambíguos de linhas coladas
+    (`_resolver_cod` 2ª passada). `_nome_canonico` casa o texto do OCR com a
+    grafia canônica de `RUBRICAS_C` e separa palavras grudadas (`_quebrar`,
+    vocabulário em `_VOCAB_EXTRA`). Só sobra `Rubrica NNN` se OCR indisponível
+    e código desconhecido. Os **valores** sempre batem com os totais impressos
+    (OCR não toca em número).
+    Códigos já mapeados (proventos): 20,21,24,26,28,101,107,114,119,127,128,
+    142,146,148,150,161,192,231,248,339,348,494,1010,1025,1040,1110.
+    **339 e 348** = "Bônus Desempenho SEDU" com valores iguais e 348 também
+    espelhado em Descontos (provável estorno) → colunas separadas (348 =
+    "(cód. 348)"); usuário decide se conta.
 
 - **D — Estado do ES, texto limpo (sem cifra)** — `_converter_formato_d`.
   Detecção: `"GOVERNO DO ESTADO"` + `"Ano Ref:"` no texto. Cobre 2 sub-modelos

@@ -427,6 +427,17 @@ RUBRICAS_C = {
     "1025": "Adiant. 13º Salário Líquido",
     "1040": "Adiant. Auxílio Alim. 13º Salário Líquido",
     "1110": "Bônus FUNDEB",
+    # Modelo "FICHA FINANCEIRA" cifrado, códigos de 3 dígitos (ex.: FICHA TESTE 2)
+    "101": "Salário Nominal",
+    "107": "13º Salário",
+    "114": "Salário Mês Anterior",
+    "127": "1/3 Férias",
+    "128": "Dif. 1/3 Férias",
+    "142": "A.T.S. Estatutário",
+    "146": "Adic. L. Especial 30%",
+    "148": "Dif. Mín. Profissional",
+    "150": "Abono",
+    "161": "Incorp. Gratif. Ref. 12",
 }
 
 _CPF_RE = re.compile(
@@ -542,6 +553,185 @@ def _hashes_glifos(caminho, pageno: int) -> dict:
         return out
     finally:
         d.close()
+
+
+# ----------------------------------------------------------------------------
+# OCR (opcional) - só para ler os NOMES das rubricas nas fichas cifradas do
+# Estado, quando o código não está em RUBRICAS_C. Os valores continuam vindo
+# da decifragem; o OCR não toca em número nenhum.
+# ----------------------------------------------------------------------------
+_OCR_ENGINE = None
+_OCR_CACHE: dict[tuple[str, int], list] = {}
+
+
+def _ocr_engine():
+    global _OCR_ENGINE
+    if _OCR_ENGINE is None:
+        try:
+            from rapidocr_onnxruntime import RapidOCR
+        except ImportError:
+            _OCR_ENGINE = False
+        else:
+            _OCR_ENGINE = RapidOCR()
+    return _OCR_ENGINE or None
+
+
+def _ocr_pagina(caminho, page_idx: int) -> list[tuple[float, float, float, str]]:
+    """OCR de uma página -> [(x0, y0, x1, texto), ...]. Cacheado."""
+    chave = (str(caminho), page_idx)
+    if chave in _OCR_CACHE:
+        return _OCR_CACHE[chave]
+    eng = _ocr_engine()
+    out: list[tuple[float, float, float, str]] = []
+    if eng is not None:
+        try:
+            import pymupdf
+
+            d = pymupdf.open(caminho)
+            png = d[page_idx].get_pixmap(dpi=300).tobytes("png")
+            d.close()
+            res, _ = eng(png)
+            for box, txt, _conf in res or []:
+                xs = [p[0] for p in box]
+                ys = [p[1] for p in box]
+                out.append((min(xs), min(ys), max(xs), txt))
+        except Exception:
+            out = []
+    _OCR_CACHE[chave] = out
+    return out
+
+
+_OCR_VALOR_RE = re.compile(r"^-?\d[\d.,]*$")
+
+
+def _ocr_rubricas(caminho, page_idx: int) -> dict[str, str]:
+    """{código -> nome} lidos por OCR da imagem da página. Considera qualquer
+    linha 'código  nome  <13 valores>' (Vantagens ou Descontos); quem consome
+    só pega os códigos que precisa."""
+    itens = _ocr_pagina(caminho, page_idx)
+    if not itens:
+        return {}
+    linhas: list[list[tuple[float, float, float, str]]] = []
+    for it in sorted(itens, key=lambda t: (round(t[1] / 10), t[0])):
+        if linhas and abs(linhas[-1][0][1] - it[1]) <= 9:
+            linhas[-1].append(it)
+        else:
+            linhas.append([it])
+
+    nomes: dict[str, str] = {}
+    for grp in linhas:
+        cells = sorted(grp, key=lambda t: t[0])
+        if not cells:
+            continue
+        prim = cells[0][3].strip()
+        resto_cells = cells[1:]
+        if re.fullmatch(r"\d{1,4}", prim):
+            codigo = prim
+        elif re.match(r"^\d{1,4}\s+\S", prim):  # "231 13SALARIO..." (com espaço)
+            codigo, resto = prim.split(None, 1)
+            resto_cells = [(0, 0, 0, resto)] + resto_cells
+        elif re.match(r"^(\d{1,4})([A-Za-zÀ-Ú/])", prim):  # "20FERIAS..." (colado)
+            m = re.match(r"^(\d{1,4})(.*)$", prim)
+            codigo = m.group(1)
+            resto_cells = [(0, 0, 0, m.group(2))] + resto_cells
+        else:
+            continue
+        partes, achou_valor = [], False
+        for c in resto_cells:
+            if _OCR_VALOR_RE.match(c[3].replace(" ", "")):
+                achou_valor = True
+                break
+            partes.append(c[3])
+        if not achou_valor or not partes:
+            continue  # não é linha de tabela (sem colunas de valor depois do nome)
+        nome = re.sub(r"\s{2,}", " ", " ".join(partes)).strip()
+        nome = re.sub(r"\s*([./%-])\s*", r"\1", nome)  # "DIF . 1 / 3" -> "DIF.1/3"
+        if nome:
+            nomes.setdefault(codigo, nome)
+    return nomes
+
+
+def _norm_rubrica(s: str) -> str:
+    """Normaliza p/ comparar (sem acento, sem espaço, sem pontuação, minúsculo)."""
+    import unicodedata
+
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+
+_RUBRICAS_NORM = None
+_VOCAB = None
+
+# Abreviações que aparecem coladas nos nomes de rubrica do SIARHES.
+_VOCAB_EXTRA = """
+SALARIO SALDO VENC VENCIMENTO PROVENTO PESSOAL CIVIL FIXO NOMINAL BASE
+FERIAS ABONO TERCEIRO DECIMO PROPORCIONAL ADIANTAMENTO ADIANT ADIAT LIQUIDO LIQ LIQU
+AUXILIO AUX ALIMENTACAO ALIMENT ALIM GRATIFICACAO GRATIF GRAT ESPECIAL ESPEC ESP
+INCORPORACAO INCORP REFERENCIA REF CARGA CARG HORARIA HORAR HORARIO CH EXTENSAO EXTEN EXT
+REMUNERADA REMUN ESTATUTARIO PROFISSIONAL PROF MINIMO MINIMA MIN DIFERENCA DIF
+DESCONTO DESC INSS IPAJM IRRF IR IMPOSTO RENDA BONUS DESEMPENHO SEDU FUNDEB
+ADICIONAL ADIC NOTURNO INSALUBRIDADE PERICULOSIDADE TEMPO SERVICO SERV DIRECAO
+FUNCAO GRATIFICADA SUBSTITUICAO ANTERIOR ANT MES SOBRE PISO COMPLEMENTO COMPL
+CONTRIBUICAO SINDICAL FAMILIA REP REPOSICAO DEVOLUCAO PERMANENCIA
+TRIENIO QUINQUENIO BIENIO PROGRESSAO ATS LEI ESTADUAL PLANTAO SEM
+""".split()
+
+
+def _vocab():
+    global _VOCAB
+    if _VOCAB is None:
+        pal = set(_VOCAB_EXTRA)
+        for v in list(RUBRICAS_C.values()) + list(RUBRICAS_CANONICAS.values()):
+            for w in re.split(r"[\s./]+", _norm_rubrica_kw(v)):
+                if len(w) >= 2:
+                    pal.add(w)
+        _VOCAB = sorted(pal, key=len, reverse=True)
+    return _VOCAB
+
+
+def _norm_rubrica_kw(s: str) -> str:
+    import unicodedata
+
+    s = unicodedata.normalize("NFKD", s).encode("ascii", "ignore").decode()
+    return re.sub(r"[^A-Za-z0-9\s./]", " ", s).upper()
+
+
+def _quebrar(run: str) -> str:
+    """Separa uma sequência de letras grudada em palavras conhecidas
+    ('FERIASREMUNCARG' -> 'FERIAS REMUN CARG'). Guloso, maior prefixo primeiro."""
+    if len(run) < 7 or not run.isalpha():
+        return run
+    voc = _vocab()
+    out, i, orfas = [], 0, 0
+    while i < len(run):
+        for w in voc:
+            if run.startswith(w, i):
+                out.append(w)
+                i += len(w)
+                break
+        else:
+            out.append(run[i])
+            orfas += 1
+            i += 1
+    # junta letras órfãs consecutivas à palavra vizinha
+    junto = re.sub(r"(?<=\w) (?=\w\b)", "", " ".join(out)).strip()
+    junto = re.sub(r"\b(\w) (\w)\b", r"\1\2", junto)
+    return junto if orfas * 3 <= len(run) else run
+
+
+def _nome_canonico(nome_ocr: str) -> str:
+    """Se o nome lido por OCR bate (ignorando espaço/acento) com um nome já
+    conhecido em RUBRICAS_C, usa a grafia canônica; senão tenta separar as
+    palavras grudadas e devolve em Title Case."""
+    global _RUBRICAS_NORM
+    if _RUBRICAS_NORM is None:
+        _RUBRICAS_NORM = {_norm_rubrica(v): v for v in RUBRICAS_C.values()}
+    canon = _RUBRICAS_NORM.get(_norm_rubrica(nome_ocr))
+    if canon:
+        return canon
+    partes = [_quebrar(p) for p in re.split(r"([ ./%\-\d]+)", nome_ocr)]
+    nome = re.sub(r"\s{2,}", " ", "".join(partes)).strip()
+    return nome.title() if nome.isupper() else nome
 
 
 def _resolver_digitos(restricoes, zero_glifo: str, unico: bool = True) -> dict | None:
@@ -773,13 +963,13 @@ def _parse_pagina_c(page):
     # inicial de glifos-dígito) do resto, que vira o nome. Pega até 5 glifos
     # aqui; a escolha final do tamanho (2..4) é feita em _converter_formato_c,
     # depois de decifrar, preferindo um código conhecido em RUBRICAS_C.
-    def _split_cod(primeiro: str, resto_nome: str) -> tuple[str, str]:
+    def _split_cod(primeiro: str, resto_nome: str) -> tuple[str, str, bool]:
         if resto_nome or all(c in alfa_digito for c in primeiro):
-            return primeiro, resto_nome
+            return primeiro, resto_nome, False  # código exato (tinha espaço)
         i = 0
         while i < len(primeiro) and i < 5 and primeiro[i] in alfa_digito:
             i += 1
-        return primeiro[:i], primeiro[i:]
+        return primeiro[:i], primeiro[i:], True  # código estava colado no nome
 
     dados_rows = [
         (*_split_cod(cod, nome), meses, total, sec)
@@ -797,7 +987,7 @@ def _parse_pagina_c(page):
 def _restricoes_c(info) -> list:
     nz = lambda t: _norm_num(t, info["sep"], info["prefixo"], info["decimal"])
     restr = []
-    for (_, _, meses, total, _) in info["dados_rows"]:
+    for (_, _, _, meses, total, _) in info["dados_rows"]:
         restr.append(([nz(x) for x in meses], nz(total)))
     for tot in (info["tot_v"], info["tot_d"], info["tot_l"]):
         if tot:
@@ -806,7 +996,7 @@ def _restricoes_c(info) -> list:
         if not tot:
             continue
         for j in range(13):
-            termos = [nz((r[2] + [r[3]])[j]) for r in info["dados_rows"] if r[4] == sec]
+            termos = [nz((r[3] + [r[4]])[j]) for r in info["dados_rows"] if r[5] == sec]
             if termos:
                 restr.append((termos, nz(tot[j])))
     if info["tot_v"] and info["tot_d"] and info["tot_l"]:
@@ -837,6 +1027,7 @@ def _converter_formato_c(pdf, avisos: list[str], caminho=None):
     blocos: dict[tuple[int, int], dict] = {}
     ordem: list[str] = []
     ocorrencias: dict[int, int] = {}
+    ocr_por_codigo: dict[str, str] = {}  # nome lido por OCR, 1x por código
 
     for info in paginas:
         npag = info["num_pagina"]
@@ -851,7 +1042,7 @@ def _converter_formato_c(pdf, avisos: list[str], caminho=None):
         dec_letras = info["dec_letras"]
 
         # verifica se dá para decifrar tudo desta página
-        chars_valores = {c for r in info["dados_rows"] for tok in (r[2] + [r[3]])
+        chars_valores = {c for r in info["dados_rows"] for tok in (r[3] + [r[4]])
                          for c in _norm_num(tok, sep, pfx, dcm) if c != _SEP_INT}
         if not chars_valores <= digitos.keys():
             avisos.append(f"Página {npag}: não consegui decifrar todos os números.")
@@ -869,37 +1060,68 @@ def _converter_formato_c(pdf, avisos: list[str], caminho=None):
         ocorrencias[ano] = ocorrencias.get(ano, 0) + 1
         dados = blocos.setdefault((ano, ocorrencias[ano]), {mes: {} for mes in MESES})
 
-        for (cod_c, nome_c, meses_c, total_c, sec) in info["dados_rows"]:
+        def _resolver_cod(bruto: str, glued: bool, ocr_map=None) -> str | None:
+            m = re.match(r"\d{1,5}", bruto)
+            if not m:
+                return None
+            d = m.group(0)
+            if not glued:
+                return d[:4]  # tinha espaço: `d` é o código
+            cand = [d[:L] for L in (4, 3, 2) if len(d) >= L]
+            if ocr_map:  # 2ª passada: o código lido por OCR é a verdade
+                for c in cand:
+                    if c in ocr_map:
+                        return c
+            for c in cand:  # prefixo que já esteja na tabela
+                if c in RUBRICAS_C:
+                    return c
+            return d[:4]
+
+        # 1º passo: resolve os códigos das linhas de proventos.
+        linhas_prov: list[tuple] = []
+        for (cod_c, nome_c, glued, meses_c, total_c, sec) in info["dados_rows"]:
             if sec != 1:
                 continue
             bruto = "".join(digitos.get(c, "?") for c in cod_c)
-            # Se o nome veio colado no código, `bruto` pode ter dígitos a mais
-            # (ex.: rubrica 231 "13 SALARIO..." -> "2311"). Prefere um prefixo
-            # que seja um código conhecido; senão, os 2-4 primeiros dígitos.
-            codigo = next(
-                (bruto[:L] for L in (4, 3, 2)
-                 if bruto[:L].isdigit() and bruto[:L] in RUBRICAS_C),
-                None,
-            )
+            codigo = _resolver_cod(bruto, glued)
             if codigo is None:
-                m = re.match(r"\d{2,4}", bruto)
-                if not m:
-                    continue
-                codigo = m.group(0)
+                continue
+            linhas_prov.append((codigo, bruto, glued, nome_c, meses_c, total_c))
+
+        # Se algum código não tem nome conhecido, lê os nomes por OCR da imagem
+        # (a fonte da descrição não é legível como texto).
+        falta_nome = any(
+            c not in RUBRICAS_C and c not in ocr_por_codigo
+            for (c, *_) in linhas_prov
+        )
+        if falta_nome and caminho:
+            for cod, nm in _ocr_rubricas(caminho, npag - 1).items():
+                ocr_por_codigo.setdefault(cod, _nome_canonico(nm))
+            # com os códigos lidos por OCR, refina os que ficaram ambíguos
+            linhas_prov = [
+                (_resolver_cod(bruto, glued, ocr_por_codigo) or codigo,
+                 bruto, glued, nome_c, meses_c, total_c)
+                for (codigo, bruto, glued, nome_c, meses_c, total_c) in linhas_prov
+            ]
+
+        for (codigo, bruto, glued, nome_c, meses_c, total_c) in linhas_prov:
             nome = RUBRICAS_C.get(codigo)
             if not nome:
                 cru = re.sub(r"\(cid:\d+\)", "", nome_c).strip((sep or "") + pfx)
                 nome = limpar_nome(dec_letras(cru))
-                if nome.count("?") * 2 >= max(len(nome), 1):
-                    # Nome ilegível (a fonte da descrição não tem mapa de
-                    # caracteres nesta ficha): usa o código como rótulo.
-                    avisos.append(
-                        f"Rubrica {codigo}: nome não disponível nesta ficha - "
-                        f"a coluna sai como 'Rubrica {codigo}'."
-                    )
-                    nome = f"Rubrica {codigo}"
-                elif "?" in nome:
-                    avisos.append(f"Rubrica {codigo}: nome parcial ('{nome}').")
+                legivel = nome and nome.count("?") * 2 < len(nome)
+                if not legivel or "?" in nome:
+                    ocr = ocr_por_codigo.get(codigo)
+                    if ocr and "?" not in ocr:
+                        nome = ocr
+                    elif not legivel:
+                        avisos.append(
+                            f"Rubrica {codigo}: nome não disponível nesta ficha - "
+                            f"a coluna sai como 'Rubrica {codigo}'."
+                        )
+                        nome = f"Rubrica {codigo}"
+                    else:
+                        avisos.append(f"Rubrica {codigo}: nome parcial ('{nome}').")
             coluna = _coluna(codigo, nome)
             if coluna not in ordem:
                 ordem.append(coluna)
