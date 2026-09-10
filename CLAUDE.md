@@ -52,7 +52,7 @@ Alvo: Railway (site separado por ora; migrar pro Valorizei depois é possível).
 `Instalar.bat` / `Desinstalar.bat` / `LEIA-ME.txt`.
 `app.py --selftest <serra|estado> <pdf>` converte sem abrir janela (testa o exe).
 
-## Os 3 layouts (`_detectar_formato` distingue A/B/C)
+## Os layouts (`_detectar_formato` distingue A/B/C/D)
 
 - **A — FPFF902** (Prefeitura da Serra, recente): texto normal, linhas
   `NNN Nome`. `_pagina_formato_a`. Cabeçalho de meses achado por
@@ -97,6 +97,21 @@ Alvo: Railway (site separado por ora; migrar pro Valorizei depois é possível).
     valores iguais e 348 também espelhado em Descontos (provável estorno) →
     ficam em colunas separadas (348 rotulado "(cód. 348)"); usuário decide se
     conta.
+
+- **D — Estado do ES, texto limpo (sem cifra)** — `_converter_formato_d`.
+  Detecção: `"GOVERNO DO ESTADO"` + `"Ano Ref:"` no texto. Cobre 2 sub-modelos
+  (ver `PDF/Estado/FF 01.pdf`, que junta os dois):
+  - "FICHA FINANCEIRA" antigo: `Ano Ref:AAAA`, servidor na linha
+    `<matrícula> <NOME> <dd/mm/aaaa>`, fim de seção `Total de Vantagens:`.
+  - "FICHA FINANCEIRA POR FUNCIONÁRIO" texto: `ANO: AAAA`,
+    `FUNCIONÁRIO:<NOME> CPF:`, meses abreviados, fim de seção linha `TOTAL ...`.
+  Linha de rubrica: `<cód 1-4díg> <nome> <12 valores> <total>`, número **estilo
+  americano** (`1,234.56` → `_US_NUM_RE`). Nome pode continuar na linha
+  seguinte (`AP.AT.SAUDE`). Nome vem direto do PDF (NÃO usa `RUBRICAS_C` —
+  1101 etc. têm significado diferente aqui). Valida soma×total impresso.
+  **Múltiplos servidores no mesmo PDF**: `_converter_formato_d` soma tudo por
+  ano/mês e emite aviso "ATENÇÃO: N servidores diferentes". Decisão pendente
+  com o usuário: `FF 01.pdf` tem 6 pessoas (arquivo de teste montado à mão?).
 
 ## Nomes de rubrica
 

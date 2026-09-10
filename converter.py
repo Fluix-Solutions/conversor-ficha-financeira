@@ -919,6 +919,116 @@ def _converter_formato_c(pdf, avisos: list[str], caminho=None):
 
 
 # ----------------------------------------------------------------------------
+# Layout D - Estado do ES, modelo "FICHA FINANCEIRA" antigo (PRD/PRODEST).
+# Texto limpo (sem cifra), uma página por ano/servidor. Seções Vantagens /
+# Descontos / Informativo / IRRF. Linhas "<código> <nome> <12 valores> <total>"
+# com número no estilo americano (1,234.56). O nome da rubrica pode continuar
+# na linha seguinte.
+# ----------------------------------------------------------------------------
+_US_NUM_RE = re.compile(r"-?\d{1,3}(?:,\d{3})*\.\d{2}")
+_LINHA_D_RE = re.compile(
+    r"^(\d{1,4})\s+(.+?)\s+((?:-?\d{1,3}(?:,\d{3})*\.\d{2}\s+){12}-?\d{1,3}(?:,\d{3})*\.\d{2})$"
+)
+
+
+def _converter_formato_d(pdf, avisos: list[str]):
+    blocos: list[dict] = []
+    for page in pdf.pages:
+        texto = page.extract_text() or ""
+        # "Ano Ref:2002" (modelo antigo) ou "ANO: 2006" (modelo "por funcionário")
+        ma = re.search(r"(?:ANO|Ano\s*Ref)\s*:\s*(\d{4})", texto)
+        if not ma:
+            continue
+        ano = int(ma.group(1))
+        mf = re.search(r"FUNCION[ÁA]RIO:\s*(.+?)\s+CPF:", texto)
+        mm = re.search(
+            r"\n\s*(\d+)\s+([A-ZÁÀÂÃÉÊÍÓÔÕÚÜÇ][^\n]*?)\s+\d{2}/\d{2}/\d{4}", texto
+        )
+        if mf:
+            rotulo = mf.group(1).strip()
+        elif mm:
+            rotulo = f"{mm.group(1)} {mm.group(2).strip()}"
+        else:
+            rotulo = f"Contrato {len(blocos) + 1}"
+
+        dados = {mes: {} for mes in MESES}
+        ordem: list[str] = []
+        secao = None
+        ult_col = None
+        for ln in texto.splitlines():
+            s = ln.strip()
+            if not s:
+                continue
+            if s == "Vantagens":
+                secao, ult_col = "V", None
+                continue
+            # Fim da seção Vantagens: linha "TOTAL ..." ou "Total de Vantagens:",
+            # ou início de outra seção.
+            if (
+                s in ("Descontos", "Informativo", "Líquido", "L�quido")
+                or s == "TOTAL"
+                or s.startswith(("TOTAL ", "IRRF", "Total de ", "Total L"))
+            ):
+                secao, ult_col = None, None
+                continue
+            # Cabeçalho dos meses (por extenso ou abreviado).
+            if ("Janeiro" in s and "Dezembro" in s) or re.match(
+                r"C[ÓO�]DIGO\s+JAN\b", s
+            ):
+                continue
+            if secao != "V":
+                continue
+            m = _LINHA_D_RE.match(s)
+            if not m:
+                # Continuação do nome da rubrica anterior (ex.: "AP.AT.SAUDE").
+                if (
+                    ult_col
+                    and not s[:1].isdigit()
+                    and not _US_NUM_RE.search(s)
+                    and len(s) <= 25
+                    and s.upper() == s
+                ):
+                    novo = f"{ult_col} {s}"
+                    ordem[ordem.index(ult_col)] = novo
+                    for mes in MESES:
+                        if ult_col in dados[mes]:
+                            dados[mes][novo] = dados[mes].pop(ult_col)
+                    ult_col = novo
+                continue
+            codigo, nome = m.group(1), m.group(2).strip()
+            nums = _US_NUM_RE.findall(m.group(3))
+            if len(nums) < 13:
+                continue
+            meses_v = [float(x.replace(",", "")) for x in nums[:12]]
+            total_v = float(nums[12].replace(",", ""))
+            coluna = _coluna(codigo, nome)
+            if coluna not in ordem:
+                ordem.append(coluna)
+            ult_col = coluna
+            if abs(sum(meses_v) - total_v) > 0.02:
+                avisos.append(
+                    f"Página {page.page_number}, rubrica {codigo} ({nome}): soma dos "
+                    f"meses ({sum(meses_v):.2f}) difere do total impresso "
+                    f"({total_v:.2f}) - conferir."
+                )
+            for mes, v in zip(MESES, meses_v):
+                dados[mes][coluna] = dados[mes].get(coluna, 0.0) + v
+
+        if ordem:
+            blocos.append({"ano": ano, "rotulo": rotulo, "dados": dados, "ordem": ordem})
+
+    nomes = list(dict.fromkeys(b["rotulo"] for b in blocos))
+    if len(nomes) > 1:
+        avisos.append(
+            "ATENÇÃO: este PDF contém " + str(len(nomes)) + " servidores diferentes ("
+            + ", ".join(nomes) + "). A planilha juntou TODOS por ano/mês. "
+            "Se cada servidor é um processo/cálculo separado, gere um PDF por "
+            "servidor e converta um de cada vez."
+        )
+    return blocos
+
+
+# ----------------------------------------------------------------------------
 def _detectar_formato(pdf) -> str:
     bruto = ""
     amostra = ""
@@ -926,6 +1036,8 @@ def _detectar_formato(pdf) -> str:
         t = page.extract_text() or ""
         bruto += t
         amostra += decode_cid(t)
+    if "GOVERNO DO ESTADO" in bruto and "Ano Ref:" in bruto:
+        return "D"
     if "HIJK$LMNJOJPI" in bruto or "\nfls. " in bruto:
         return "C"
     return "B" if "Evento:" in amostra else "A"
@@ -964,13 +1076,13 @@ def converter(pdf_path: Path, out_path: Path, origem: str) -> dict:
             )
         fmt = _detectar_formato(pdf)
 
-        if origem == "serra" and fmt == "C":
+        if origem == "serra" and fmt in ("C", "D"):
             raise ConversaoError(
                 f"Você escolheu '{ORIGENS['serra']}', mas este PDF parece ser uma "
-                f"ficha do {ORIGENS['estado']} (SIARHES).\n"
+                f"ficha do {ORIGENS['estado']}.\n"
                 f"Troque o seletor para '{ORIGENS['estado']}' e converta de novo."
             )
-        if origem == "estado" and fmt != "C":
+        if origem == "estado" and fmt not in ("C", "D"):
             raise ConversaoError(
                 f"Você escolheu '{ORIGENS['estado']}', mas este PDF parece ser uma "
                 f"ficha do {ORIGENS['serra']}.\n"
@@ -978,7 +1090,11 @@ def converter(pdf_path: Path, out_path: Path, origem: str) -> dict:
             )
 
         if origem == "estado":
-            blocos = _converter_formato_c(pdf, avisos, pdf_path)
+            blocos = (
+                _converter_formato_d(pdf, avisos)
+                if fmt == "D"
+                else _converter_formato_c(pdf, avisos, pdf_path)
+            )
         elif fmt == "A":
             matricula_atual = None
             for page in pdf.pages:
