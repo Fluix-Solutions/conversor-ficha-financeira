@@ -17,7 +17,7 @@
       </div>
     </div>
     <nav class="nav">
-      <a class="active" href="#">
+      <a class="active" href="#" id="nav-converter">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h12l4 4v12H4z"/><path d="M8 12h8M8 16h8M8 8h4"/></svg>
         Converter
       </a>
@@ -27,7 +27,7 @@
       </a>
     </nav>
     <div class="sidebar-foot">
-      <button id="toggle-tema">
+      <button id="toggle-tema" type="button">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
         <span>Modo escuro</span>
       </button>
@@ -37,32 +37,66 @@
 
   <main class="main">
     <div class="main-inner">
-      <h1>Converter ficha financeira</h1>
-      <p class="page-sub">Envie o PDF da ficha financeira e baixe a planilha Excel com os proventos por mês. O arquivo é processado na hora e não fica guardado.</p>
+      <header class="topbar">
+        <div class="topbar-brand">
+          <div class="brand-logo">V</div>
+          <span>Conversor de fichas</span>
+        </div>
+        <button id="toggle-tema-m" class="icon-btn" type="button" aria-label="Alternar tema">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/></svg>
+        </button>
+      </header>
 
-      <section class="card">
-        <h2>1. Origem da ficha</h2>
+      <div class="page-head">
+        <h1>Converter ficha financeira</h1>
+        <p class="page-sub">Transforme o PDF da ficha em uma planilha Excel dos proventos por mês.</p>
+        <p class="page-note">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
+          Processado na hora — nada fica salvo no servidor.
+        </p>
+      </div>
+
+      <ol class="steps" id="steps">
+        <li data-step="origem"><span class="dot">1</span>Origem</li>
+        <li data-step="arquivo"><span class="dot">2</span>Arquivo PDF</li>
+        <li data-step="baixar"><span class="dot">3</span>Baixar Excel</li>
+      </ol>
+
+      <section class="panel" id="painel-ajuda" hidden>
+        <h2>Como usar</h2>
+        <ol class="ajuda-list">
+          <li>Escolha a <strong>origem</strong> da ficha — Município da Serra ou Estado do Espírito Santo.</li>
+          <li>Escolha ou arraste o <strong>PDF</strong> da ficha financeira.</li>
+          <li>Clique em <strong>Converter para Excel</strong>. O download começa sozinho.</li>
+        </ol>
+        <p class="ajuda-nota">O PDF é processado na hora e descartado — nada fica salvo no servidor. PDFs escaneados (imagem, sem texto selecionável) ainda não são suportados.</p>
+      </section>
+
+      <section class="card" data-card="origem" id="card-origem">
+        <div class="card-head"><span class="badge">1</span><h2>Origem da ficha</h2></div>
         <p class="field-hint">Digite para pesquisar e escolha na lista.</p>
         <div class="combo" id="combo">
-          <input type="text" id="combo-input" placeholder="Ex.: Serra, Espírito Santo…" autocomplete="off">
+          <input type="text" id="combo-input" placeholder="Ex.: Serra, Espírito Santo…" autocomplete="off" inputmode="search">
           <ul id="combo-list" hidden></ul>
         </div>
       </section>
 
-      <section class="card">
-        <h2>2. Arquivo PDF</h2>
+      <section class="card" data-card="arquivo" id="card-arquivo">
+        <div class="card-head"><span class="badge">2</span><h2>Arquivo PDF</h2></div>
         <div class="filepick">
           <label class="dropzone" id="dropzone" for="pdf-input">
+            <svg class="dz-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 15V4M8 8l4-4 4 4"/><path d="M4 15v3a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-3"/></svg>
             <div id="dz-text"><strong>Clique para escolher</strong> ou arraste o PDF aqui</div>
           </label>
           <input type="file" id="pdf-input" accept="application/pdf,.pdf">
         </div>
       </section>
 
-      <button class="btn-primary" id="btn-converter" disabled>Converter para Excel</button>
+      <button class="btn-primary" id="btn-converter" type="button" disabled>Converter para Excel</button>
 
-      <section class="card" id="result-card" hidden style="margin-top:18px">
+      <section class="card result-card" id="result-card" hidden>
         <div class="result" id="result"></div>
+        <button class="btn" id="btn-baixar-de-novo" type="button" hidden>Baixar de novo</button>
       </section>
     </div>
   </main>
