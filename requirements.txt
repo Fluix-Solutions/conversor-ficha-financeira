@@ -2,6 +2,10 @@
 # Sem "-r requirements-base.txt": o Railpack copia só este arquivo antes do
 # pip install, então um include quebra o build. Manter em sincronia com
 # requirements-base.txt.
+#
+# OCR (rapidocr) fica de fora aqui por ora - pesa ~150 MB e precisa de config
+# extra no servidor. Sem ele, código de rubrica desconhecido no layout C sai
+# como "Rubrica NNN". Adicionar quando o deploy estiver estável.
 pdfplumber>=0.11
 openpyxl>=3.1
 pymupdf>=1.24

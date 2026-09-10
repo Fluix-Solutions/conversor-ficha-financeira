@@ -1,3 +1,9 @@
 # App de desktop (janela pywebview).
 -r requirements-base.txt
 pywebview>=6.0
+
+# OCR - lê os NOMES das rubricas nas fichas cifradas do Estado quando o código
+# ainda não está mapeado em RUBRICAS_C. opencv-python-headless vem antes de
+# propósito, pra o rapidocr não puxar o opencv-python "cheio".
+opencv-python-headless>=4.9
+rapidocr-onnxruntime>=1.3
