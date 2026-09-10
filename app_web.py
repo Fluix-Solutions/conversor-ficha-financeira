@@ -2,7 +2,6 @@
 Conversor de Ficha Financeira — janela com visual do Valorizei (pywebview).
 
 Rodar:   python app_web.py
-Empacotar: python -m PyInstaller --noconfirm ConversorWeb.spec
 """
 from __future__ import annotations
 

@@ -45,12 +45,15 @@ persiste, nada em log). Login opcional por env: `CONVERSOR_SENHA` /
 mesmo visual do `ui/` adaptado para `fetch` + `<input type=file>` + drag-drop.
 Alvo: Railway (site separado por ora; migrar pro Valorizei depois é possível).
 
-## Empacotamento (.exe)
+## Empacotamento (.exe) — ABANDONADO (2026-09-09)
 
-`Conversor.spec` + `construir_exe.bat` → `dist/Conversor de Ficha Financeira.exe`
-(PyInstaller onefile, windowed, ícone `icone.ico`). `dist/` também tem
-`Instalar.bat` / `Desinstalar.bat` / `LEIA-ME.txt`.
-`app.py --selftest <serra|estado> <pdf>` converte sem abrir janela (testa o exe).
+Caminho do `.exe` descartado: a máquina do usuário tem **Smart App Control em
+modo ENFORCE**, que bloqueia qualquer `.exe` não assinado (PyInstaller/Nuitka/
+Electron não resolvem — é falta de assinatura de código). Os arquivos de build
+(`ConversorWeb.spec`, `construir_exe.bat`, `icone.ico`, `version_info.txt`,
+`dist/`) foram removidos. Distribuição = **versão web** (Railway) ou rodar
+`python app_web.py` / `python server.py` localmente.
+`app.py --selftest <serra|estado> <pdf>` ainda converte sem abrir janela.
 
 ## Os layouts (`_detectar_formato` distingue A/B/C/D)
 
@@ -126,9 +129,10 @@ folha diferentes; não se sobrepõem no mesmo ano).
 
 ## Pendências / próximos passos
 
-- **FF 3** é PDF **escaneado** (imagem) → precisa OCR (Tesseract não instalado).
+- **Deploy no Railway** (em andamento — usuário criou a conta; falta ligar o
+  repo `WilkersonPenido/conversor-ficha-financeira` e gerar o domínio).
+- PDFs **escaneados** (imagem) da Serra → precisa OCR (Tesseract não instalado).
   Plano: render + OCR + conferir contra a coluna Total.
-- Gerar `.exe` único (PyInstaller) para rodar sem Python.
 - Conversão em lote (pasta inteira).
 - Incluir Descontos/Outros, se o sistema precisar.
 - Testar com mais fichas reais.

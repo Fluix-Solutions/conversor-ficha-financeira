@@ -1,8 +1,8 @@
 # Conversor de Ficha Financeira (PDF → Excel)
 
-Converte a "Relação Ficha Financeira" (modelo Prefeitura da Serra) em uma
-planilha `.xlsx` com os **Proventos** por mês: uma linha por `Ano + Mês`,
-uma coluna por rubrica (só o nome da verba, sem o código).
+Converte a Ficha Financeira (Prefeitura da Serra **ou** Governo do Estado do
+ES) em uma planilha `.xlsx` com os **Proventos** por mês: uma linha por
+`Ano + Mês`, uma coluna por rubrica (só o nome da verba, sem o código).
 
 ## Instalação (uma vez)
 
@@ -48,13 +48,19 @@ sozinho os dois modelos:
 traz mapa de caracteres — o texto é decodificado por deslocamento fixo.
 Só a linha **Valor** é usada; os meses são deduzidos pela posição de cada número.
 
-**C — SIARHES / PRODEST (Governo do Estado do ES).** Uma página por ano,
-seções **Vantagens** e **Descontos**. A fonte é do tipo Type3 (glifos
+**C — SIARHES / PRODEST (Governo do Estado do ES), com cifra.** Uma página por
+ano, seções **Vantagens** e **Descontos**. A fonte é do tipo Type3 (glifos
 desenhados) e cada página embaralha as letras e os números de um jeito
 diferente. O programa descobre a cifra de cada página cruzando as linhas de
 total (`soma dos 12 meses = coluna Total`, `Total Líquido = Vantagens −
 Descontos`) e comparando o desenho de cada glifo entre as páginas. Todos os
 valores conferem com os totais impressos no PDF.
+
+**D — Governo do Estado do ES, texto limpo (sem cifra).** Modelos "FICHA
+FINANCEIRA" e "FICHA FINANCEIRA POR FUNCIONÁRIO". Linhas
+`código  nome  12 valores  total`, número no estilo `1.234,56` americano
+(`1,234.56`). O nome da rubrica vem do próprio PDF. Se o arquivo tiver mais
+de um servidor, o programa junta tudo e mostra um aviso.
 
 A planilha tem sempre **uma linha por Ano + Mês**. Se a pessoa teve **mais de um
 contrato (matrícula)** e dois deles pagaram no mesmo mês, os valores da mesma
@@ -111,22 +117,6 @@ Defina as variáveis de ambiente antes de subir:
 
 Arquivos de deploy: `requirements.txt`, `Procfile`, `runtime.txt`.
 
-## Gerar o `.exe` (para usar sem Python)
-
-Dê um duplo clique em **`construir_exe.bat`** (ou rode
-`python -m PyInstaller --noconfirm Conversor.spec`).
-
-Resultado em `dist/`:
-
-| Arquivo | Para quê |
-|---|---|
-| `Conversor de Ficha Financeira.exe` | O programa (arquivo único, ~55 MB) |
-| `Instalar.bat` | Copia o `.exe` para a conta do usuário e cria atalhos |
-| `Desinstalar.bat` | Remove o que o `Instalar.bat` criou |
-| `LEIA-ME.txt` | Instruções para quem receber o programa |
-
-Distribua a pasta `dist/` inteira (ou só o `.exe`, que já funciona sozinho).
-
 ## Arquivos do projeto
 
 | Arquivo | Função |
@@ -134,9 +124,8 @@ Distribua a pasta `dist/` inteira (ou só o `.exe`, que já funciona sozinho).
 | `converter.py` | Motor da conversão (`python converter.py PDF -t serra\|estado`) |
 | `server.py` + `web/` | Versão web (Flask) |
 | `app_web.py` + `ui/` | App de janela (pywebview, visual Valorizei) |
-| `app.py` | App de janela antigo (Tkinter) — fallback |
+| `app.py` | App de janela antigo (Tkinter) — reserva |
 | `Conversor.bat` | Abre o app de janela (duplo clique) |
-| `ConversorWeb.spec` / `construir_exe.bat` | Geram o `.exe` |
 | `requirements.txt` | Deploy web (engine + Flask) |
 | `requirements-desktop.txt` | App de janela (engine + pywebview) |
 | `requirements-base.txt` | Só o motor (`pdfplumber`, `openpyxl`, `pymupdf`) |
