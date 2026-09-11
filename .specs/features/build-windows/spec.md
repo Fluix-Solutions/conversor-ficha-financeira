@@ -32,7 +32,7 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | Formato de entrega | Zip da pasta portátil | Caminho que já passou pelo Smart App Control | y |
 | Onde publicar | GitHub Release por tag (repo público: download aberto) | Link permanente por versão | y |
 | Travar versões | Lock com versão exata + hash por pacote, para win_amd64/cp312 | Build reproduzível; escolha do usuário | y |
-| Disparo | Tag `vX.Y` ou `vX.Y.Z` publica Release; o botão manual (`workflow_dispatch`) tem a opção `publicar`, marcada por padrão: marcada cria a tag `v<server.VERSAO>` e a Release no commit escolhido; desmarcada só gera o zip como artefato | Decisão do usuário (2026-09-11): o disparo manual publica; depois do Verifier, o usuário escolheu a opção `publicar` para poder testar o zip (inclusive com Smart App Control) antes de publicar | y |
+| Disparo | PR para a `main` que mexe no app/build só testa (o `workflow_dispatch` exige o workflow na branch padrão, então o 1º teste é por PR — usuário, 2026-09-11). Tag `vX.Y` ou `vX.Y.Z` publica Release; o botão manual (`workflow_dispatch`) tem a opção `publicar`, marcada por padrão: marcada cria a tag `v<server.VERSAO>` e a Release no commit escolhido; desmarcada só gera o zip como artefato | Decisão do usuário (2026-09-11): o disparo manual publica; depois do Verifier, o usuário escolheu a opção `publicar` para poder testar o zip (inclusive com Smart App Control) antes de publicar | y |
 | Versão do Python embutido | Manter 3.12.9 (a validada hoje); não subir para 3.12.10 aqui | Não misturar troca de runtime com mudança de pipeline | y |
 | Versões iniciais do lock | O que o `uv` resolve hoje para Windows; se o teste de OCR falhar com `opencv-python 5`, travar `opencv-python < 5` | O teste com a ficha fictícia escaneada decide, não suposição. Spike no Mac (2026-09-11) com opencv 5.0.0 + numpy 2.5.3: texto e OCR com valores exatos | y |
 | Ficha fictícia de teste | Layout D (Estado, texto limpo) gerado com pymupdf dentro do teste, valores em colunas espaçadas como numa ficha real; a versão escaneada é a mesma ficha rasterizada em 300 DPI, sem camada de texto | É o único layout fabricável sem cifra/grade; o OCR do Estado remonta a mesma tabela. Com valores separados por um espaço só, o OCR lê a linha inteira como uma caixa e não remonta | y |
@@ -70,6 +70,7 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 10. WHEN o build termina com sucesso THEN the pipeline SHALL registrar no log os pacotes instalados na pasta com versão, o tamanho do zip e o SHA-256 do zip.  <!-- WIN-10 -->
 11. WHEN o workflow é disparado manualmente com a opção `publicar` desmarcada THEN the pipeline SHALL rodar o build e os testes e disponibilizar o zip só como artefato por 14 dias, sem criar tag nem Release.  <!-- WIN-22 -->
 12. IF a tag da Release já existe apontando para um commit diferente do que está sendo construído THEN the pipeline SHALL falhar antes do build com uma mensagem que mostra os dois commits.  <!-- WIN-23 -->
+13. WHEN um pull request para a `main` altera arquivos do app, do build ou dos testes THEN the pipeline SHALL rodar o build e os testes no Windows e deixar o zip só como artefato, sem criar tag nem Release.  <!-- WIN-24 -->
 
 **Independent Test**: Disparar o workflow com `publicar` desmarcado (`gh workflow run windows.yml -f publicar=false`); o job de build fica verde só se WIN-04..07 passarem, o zip aparece como artefato e nenhuma tag/Release é criada. Com `publicar` marcado, a Release `v<server.VERSAO>` aparece.
 
@@ -175,10 +176,11 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | WIN-19 | P2: Versão e docs | T2 | Verified |
 | WIN-20 | P2: Versão e docs | T8 | Implementing |
 | WIN-21 | P2: Versão e docs | T8 | Verified |
-| WIN-22 | P1: Build verificado | F3 | Pending |
-| WIN-23 | P1: Build verificado | F2, F3 | Pending |
+| WIN-22 | P1: Build verificado | T11 | Implementing |
+| WIN-23 | P1: Build verificado | T10, T11 | Implementing |
+| WIN-24 | P1: Build verificado | T13 | Pending |
 
-**Coverage:** 23 total, 23 mapped to tasks, 0 unmapped
+**Coverage:** 24 total, 24 mapped to tasks, 0 unmapped
 
 ---
 

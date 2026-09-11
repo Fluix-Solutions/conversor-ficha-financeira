@@ -64,7 +64,7 @@ T7 → T8
 ### Phase 4: Correções do Verifier (validation.md, 1ª rodada: FAIL)
 
 ```
-T9 → T10 → T11 → T12
+T9 → T10 → T11 → T12 → T13
 ```
 
 ---
@@ -392,6 +392,33 @@ T9 → T10 → T11 → T12
 **Gate**: build
 
 **Commit**: `docs(windows): document test runs without publishing`
+
+---
+
+### T13: Gatilho de pull request
+
+**What**: O workflow roda também em pull request para a `main` que altera app, build ou testes (filtro `paths`); o job `release` não roda em PR.
+**Where**: `.github/workflows/windows.yml`
+**Depends on**: T12
+**Reuses**: condição do job `release` da T11
+**Requirement**: WIN-24
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] `on.pull_request` com `branches: [main]` e `paths` cobrindo `converter.py`, `server.py`, `app_desktop.py`, `web/**`, `construir_portatil.py`, `release.py`, `requirements*`, `tests/**` e o próprio workflow
+- [x] `release` continua com `if: github.event_name == 'push' || inputs.publicar` (falso em PR)
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [ ] Gate CI: o PR `build-windows → main` roda o job `build` verde no Windows e o job `release` fica pulado
+
+**Tests**: none
+**Gate**: build
+
+**Commit**: `ci(windows): run the windows build on pull requests to main`
 
 ---
 

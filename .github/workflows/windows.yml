@@ -5,6 +5,7 @@
 #   - "Run workflow"     -> Release v<server.VERSAO> no commit escolhido;
 #                           com "publicar" desmarcado, só testa e deixa o zip
 #                           como artefato (14 dias), sem tag nem Release
+#   - PR para a main     -> só testa (zip como artefato); nunca publica
 #
 # Nada é publicado se qualquer passo falhar. Release existente nunca é
 # sobrescrita: para republicar, suba o VERSAO.
@@ -15,6 +16,20 @@ on:
     tags:
       - "v[0-9]+.[0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+"
+  # O "Run workflow" só existe depois que este arquivo está na main; o PR é
+  # como mudanças no app ou no build são testadas no Windows antes disso.
+  pull_request:
+    branches: [main]
+    paths:
+      - converter.py
+      - server.py
+      - app_desktop.py
+      - web/**
+      - construir_portatil.py
+      - release.py
+      - requirements*
+      - tests/**
+      - .github/workflows/windows.yml
   workflow_dispatch:
     inputs:
       publicar:
