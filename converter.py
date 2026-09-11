@@ -575,16 +575,51 @@ _OCR_ERRO = None  # por que o OCR não carregou (para conferir o deploy)
 _OCR_CACHE: dict[tuple[str, int], list] = {}
 
 
+def _cpus_disponiveis() -> float:
+    """Quantas CPUs este processo pode realmente usar.
+
+    Dentro de um container, `os.cpu_count()` mente: devolve os núcleos da
+    máquina hospedeira, e não a fatia alocada. Quem sabe a verdade é o cgroup.
+    """
+    # cgroup v2
+    try:
+        txt = Path("/sys/fs/cgroup/cpu.max").read_text().split()
+        if txt[0] != "max":
+            return max(0.1, int(txt[0]) / int(txt[1]))
+    except Exception:  # noqa: BLE001
+        pass
+    # cgroup v1
+    try:
+        q = int(Path("/sys/fs/cgroup/cpu/cpu.cfs_quota_us").read_text())
+        p = int(Path("/sys/fs/cgroup/cpu/cpu.cfs_period_us").read_text())
+        if q > 0 and p > 0:
+            return max(0.1, q / p)
+    except Exception:  # noqa: BLE001
+        pass
+    # fora de container: afinidade real, senão o total da máquina
+    try:
+        return float(len(os.sched_getaffinity(0)))  # type: ignore[attr-defined]
+    except Exception:  # noqa: BLE001
+        return float(os.cpu_count() or 1)
+
+
+def _cpus_ocr() -> int:
+    """Threads que o OCR pode usar. Com 2 CPUs ou mais deixa uma livre para o
+    servidor continuar respondendo; com menos que isso, usa 1."""
+    c = _cpus_disponiveis()
+    return max(1, int(c) - 1) if c >= 2 else 1
+
+
 def _ocr_engine():
     global _OCR_ENGINE, _OCR_ERRO
     if _OCR_ENGINE is None:
-        # O OCR é puro CPU e o onnxruntime, por padrão, ocupa todos os núcleos.
-        # Num servidor com 1 worker isso deixa o site inteiro lento enquanto
-        # uma ficha escaneada converte — até para quem só quer mandar um PDF
-        # de texto. Deixa um núcleo livre para continuar atendendo.
-        os.environ.setdefault(
-            "OMP_NUM_THREADS", str(max(1, (os.cpu_count() or 2) - 1))
-        )
+        # O OCR é puro CPU e o onnxruntime, por padrão, abre uma thread por
+        # núcleo. Num container isso é uma armadilha: `os.cpu_count()` devolve
+        # os núcleos do HOSPEDEIRO, não a fatia do container. Num host de 32
+        # núcleos com 1 vCPU alocado, seriam 32 threads disputando 1 CPU —
+        # muito mais lento do que rodar com uma. Por isso `_cpus_disponiveis()`
+        # lê o limite real do cgroup.
+        os.environ.setdefault("OMP_NUM_THREADS", str(_cpus_ocr()))
         try:
             from rapidocr_onnxruntime import RapidOCR
         except Exception as e:  # noqa: BLE001 - inclui falta de lib do sistema
@@ -603,7 +638,13 @@ def ocr_status() -> dict:
     """Se o leitor de imagens (OCR) está disponível e, quando não, por quê.
     Serve para conferir um deploy: sem OCR, ficha escaneada é recusada."""
     ok = _ocr_engine() is not None
-    return {"ocr": ok, "ocr_erro": None if ok else (_OCR_ERRO or "indisponível")}
+    return {
+        "ocr": ok,
+        "ocr_erro": None if ok else (_OCR_ERRO or "indisponível"),
+        # Sem isto não dá para saber se o OCR está lento por falta de CPU.
+        "cpus": round(_cpus_disponiveis(), 2),
+        "ocr_threads": int(os.environ.get("OMP_NUM_THREADS", 0)) or None,
+    }
 
 
 def _ocr_pagina(caminho, page_idx: int) -> list[tuple[float, float, float, str]]:
