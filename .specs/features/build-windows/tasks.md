@@ -64,7 +64,7 @@ T7 → T8
 ### Phase 4: Correções do Verifier (validation.md, 1ª rodada: FAIL)
 
 ```
-T9 → T10 → T11 → T12 → T13
+T9 → T10 → T11 → T12 → T13 → T14
 ```
 
 ---
@@ -419,6 +419,34 @@ T9 → T10 → T11 → T12 → T13
 **Gate**: build
 
 **Commit**: `ci(windows): run the windows build on pull requests to main`
+
+---
+
+### T14: Dependência que só existe como código-fonte
+
+**What**: `setuptools` entra no lock (`requirements-build-windows.txt`); o build instala primeiro o bloco do `setuptools` tirado do lock (com hash) e depois o lock inteiro com `--no-build-isolation`.
+**Where**: `construir_portatil.py`
+**Depends on**: T13
+**Reuses**: `comando_instalar` (T3), lock (T1)
+**Requirement**: WIN-16, WIN-17, WIN-25 (falha do 1º run no CI: `Cannot import 'setuptools.build_meta'` no `proxy-tools`)
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Lock regenerado com `requirements-desktop.txt requirements-build-windows.txt`; `setuptools` presente com hash; versões já travadas mantidas
+- [x] `tests/test_lock.py`: `setuptools` no lock; os pacotes de `requirements-build-windows.txt` também são cobertos
+- [x] `tests/test_construir.py`: o `main` executa duas instalações, as duas com `--require-hashes`; a 1ª só com o bloco `setuptools==` tirado do lock (com `--hash`); a 2ª com `-r requirements-windows.lock` e `--no-build-isolation`
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [ ] Gate CI: job `build` verde no PR
+
+**Tests**: unit
+**Gate**: build
+
+**Commit**: `fix(windows): build sdist-only deps with the locked setuptools`
 
 ---
 

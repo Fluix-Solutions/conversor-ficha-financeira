@@ -95,10 +95,35 @@ def conferir_sha256(arquivo: Path, esperado: str) -> None:
         )
 
 
-def comando_instalar(python_exe: Path) -> list[str]:
-    """pip do Python da pasta instalando só o que está no lock, com hash."""
-    return [str(python_exe), "-m", "pip", "install", "--no-warn-script-location",
-            "--require-hashes", "-r", str(LOCK)]
+def bloco_do_lock(nome: str) -> str:
+    """As linhas de um pacote no lock (`nome==versão` + seus `--hash`)."""
+    linhas, dentro = [], False
+    for ln in LOCK.read_text(encoding="utf-8").splitlines():
+        if ln.startswith(f"{nome}=="):
+            dentro = True
+        elif dentro and not ln[:1].isspace():
+            break
+        if dentro:
+            linhas.append(ln)
+    if not linhas:
+        raise RuntimeError(f"{nome} nao esta em {LOCK.name}")
+    return "\n".join(linhas) + "\n"
+
+
+def comandos_instalar(python_exe: Path, tmp: Path) -> list[list[str]]:
+    """pip do Python da pasta instalando só o que está no lock, com hash.
+
+    Duas etapas porque o proxy-tools (do pywebview) só existe como código-
+    fonte e precisa ser compilado. O isolamento de build do pip entrega o
+    setuptools por PYTHONPATH, que o Python embutido ignora (._pth) — dá
+    `Cannot import 'setuptools.build_meta'`. Então: 1º o setuptools do lock,
+    depois tudo com --no-build-isolation, usando esse setuptools."""
+    pre = tmp / "setuptools.txt"
+    pre.write_text(bloco_do_lock("setuptools"), encoding="utf-8")
+    base = [str(python_exe), "-m", "pip", "install", "--no-warn-script-location",
+            "--require-hashes"]
+    return [base + ["-r", str(pre)],
+            base + ["--no-build-isolation", "-r", str(LOCK)]]
 
 
 def zipar(alvo: Path, destino: Path) -> None:
@@ -184,7 +209,8 @@ def main() -> int:
 
     # 3. dependências
     print("3/5 dependencias (demora — sao ~400 MB)")
-    subprocess.run(comando_instalar(pydir / "python.exe"), check=True)
+    for cmd in comandos_instalar(pydir / "python.exe", tmp):
+        subprocess.run(cmd, check=True)
 
     # 4. aplicação
     print("4/5 aplicacao")

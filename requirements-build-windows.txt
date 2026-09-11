@@ -1,0 +1,6 @@
+# So para montar a pasta portatil do Windows (entra no requirements-windows.lock).
+# proxy-tools (dependencia do pywebview) so existe como codigo-fonte no PyPI e
+# precisa ser compilado. O isolamento de build do pip passa o setuptools por
+# PYTHONPATH, que o Python embutido ignora (._pth) - entao o construir_portatil.py
+# instala este setuptools antes e o resto com --no-build-isolation.
+setuptools

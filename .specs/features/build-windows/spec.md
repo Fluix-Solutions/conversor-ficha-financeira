@@ -38,6 +38,7 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | Ficha fictícia de teste | Layout D (Estado, texto limpo) gerado com pymupdf dentro do teste, valores em colunas espaçadas como numa ficha real; a versão escaneada é a mesma ficha rasterizada em 300 DPI, sem camada de texto | É o único layout fabricável sem cifra/grade; o OCR do Estado remonta a mesma tabela. Com valores separados por um espaço só, o OCR lê a linha inteira como uma caixa e não remonta | y |
 | Nome das colunas no caminho OCR | Comparar nomes de rubrica sem diferenciar maiúsculas | O OCR passa o nome por `_nome_canonico`, que devolve `Vencimento` onde o texto dá `VENCIMENTO`; o que se verifica é o valor | n |
 | Integridade do Python embutido | SHA-256 do zip fixado no script, conferido após o download (`615861fb…5865`; o MD5 bate com o publicado pelo python.org) | Repo público distribui binário a terceiros | n |
+| Dependência só em código-fonte (`proxy-tools 0.1.0`, do pywebview) | `setuptools` entra no lock (via `requirements-build-windows.txt`), é instalado primeiro com hash e o resto vai com `--no-build-isolation` | 1º run no CI (2026-09-11) falhou: o isolamento de build do pip passa o `setuptools` por `PYTHONPATH`, que o Python embutido ignora (`._pth`). Builds antigos provavelmente usavam um wheel já compilado no cache do pip da máquina | y |
 | `get-pip.py` | Continua baixando do `bootstrap.pypa.io` sem versão fixa | O pip só instala; tudo o que o app usa vem do lock com hash | n |
 | Release já existente para a tag | Falhar sem sobrescrever | Um zip publicado não muda por baixo de quem já baixou | n |
 | Retenção do artefato do workflow | 14 dias | O zip permanente é o da Release; o artefato só leva o zip do build para o job de publicação | n |
@@ -105,6 +106,7 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 1. The build SHALL instalar as dependências da pasta a partir de um lock com versão exata e hash de cada pacote para win_amd64/cp312, usando `pip install --require-hashes`.  <!-- WIN-16 -->
 2. The lock SHALL conter todo pacote listado em `requirements-desktop.txt` e em `requirements-base.txt`.  <!-- WIN-17 -->
 3. WHEN o lock precisa ser atualizado THEN the project SHALL oferecer um único comando, rodável no Mac, que o regenera para Windows a partir de `requirements-desktop.txt`.  <!-- WIN-18 -->
+4. IF uma dependência do lock só existe como código-fonte (ex.: `proxy-tools`) THEN the build SHALL compilá-la com o `setuptools` do lock, instalado antes com hash conferido, sem depender de `PYTHONPATH` (que o Python embutido ignora).  <!-- WIN-25 -->
 
 **Independent Test**: Rodar o teste unitário que compara o lock com os requirements; rodar o comando de regeneração no Mac e ver o lock regenerado idêntico quando nada mudou no PyPI.
 
@@ -178,9 +180,10 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | WIN-21 | P2: Versão e docs | T8 | Verified |
 | WIN-22 | P1: Build verificado | T11 | Implementing |
 | WIN-23 | P1: Build verificado | T10, T11 | Implementing |
-| WIN-24 | P1: Build verificado | T13 | Pending |
+| WIN-24 | P1: Build verificado | T13 | Implementing |
+| WIN-25 | P1: Dependências travadas | T14 | Implementing |
 
-**Coverage:** 24 total, 24 mapped to tasks, 0 unmapped
+**Coverage:** 25 total, 25 mapped to tasks, 0 unmapped
 
 ---
 

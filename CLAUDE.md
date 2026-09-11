@@ -168,6 +168,13 @@ roda (ele executa o `python.exe` da pasta). O build oficial é
   `ResolutionImpossible`. Quem resolve certo é `uv pip compile
   --python-platform x86_64-pc-windows-msvc` (comando no cabeçalho do
   `requirements-windows.lock`; sem `--upgrade` ele mantém as versões).
+- **`proxy-tools` (do pywebview) só existe como código-fonte** e precisa ser
+  compilado. O isolamento de build do pip passa o `setuptools` por
+  `PYTHONPATH`, que o Python embutido ignora → `Cannot import
+  'setuptools.build_meta'` (1º run no CI). O `setuptools` entra no lock via
+  `requirements-build-windows.txt`, é instalado primeiro (bloco tirado do
+  lock, com hash) e o resto vai com `--no-build-isolation`. Na máquina do
+  autor original funcionava por causa do wheel já compilado no cache do pip.
 - **Python preso na 3.12**: `rapidocr-onnxruntime` exige `<3.13`, e 3.12.10 foi
   o último 3.12 com embeddable. Sair disso = migrar para o pacote `rapidocr`.
 - O lock atual traz `opencv-python 5.0.0.93` + `numpy 2.5.3`; os testes de OCR

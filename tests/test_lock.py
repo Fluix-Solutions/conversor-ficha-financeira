@@ -42,9 +42,9 @@ def _pacotes_lock() -> dict[str, dict]:
 
 
 def test_lock_cobre_todos_os_requirements():
-    pedidos = _requisitos(RAIZ / "requirements-desktop.txt") | _requisitos(
-        RAIZ / "requirements-base.txt"
-    )
+    pedidos = (_requisitos(RAIZ / "requirements-desktop.txt")
+               | _requisitos(RAIZ / "requirements-base.txt")
+               | _requisitos(RAIZ / "requirements-build-windows.txt"))
     faltando = pedidos - set(_pacotes_lock())
     assert pedidos >= {"pdfplumber", "openpyxl", "pymupdf", "pywebview", "flask",
                        "rapidocr-onnxruntime"}
@@ -78,3 +78,10 @@ def test_lock_e_de_windows():
     assert "pythonnet" in pacotes
     assert "pywebview" in pacotes
     assert not any(n.startswith("pyobjc") for n in pacotes)
+
+
+def test_lock_traz_setuptools_para_compilar_o_que_so_tem_codigo_fonte():
+    # proxy-tools (do pywebview) só existe como .tar.gz no PyPI.
+    pacotes = _pacotes_lock()
+    assert "proxy-tools" in pacotes
+    assert pacotes["setuptools"]["hashes"]

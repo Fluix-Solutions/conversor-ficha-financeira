@@ -158,8 +158,9 @@ exemplo, depois de mudar `requirements-desktop.txt`), rode no Mac o comando
 que está no cabeçalho do próprio lock:
 
 ```bash
-uv pip compile requirements-desktop.txt --python-platform x86_64-pc-windows-msvc \
-  --python-version 3.12 --generate-hashes -o requirements-windows.lock
+uv pip compile requirements-desktop.txt requirements-build-windows.txt \
+  --python-platform x86_64-pc-windows-msvc --python-version 3.12 \
+  --generate-hashes -o requirements-windows.lock
 ```
 
 Com o lock existente, o `uv` mantém as versões já travadas; para subir um
@@ -271,6 +272,7 @@ Arquivos de deploy: `Dockerfile` (o que o Railway usa), `.dockerignore`,
 | `requirements-base.txt` | Só o motor (`pdfplumber`, `openpyxl`, `pymupdf`) |
 | `construir_portatil.py` | Monta a pasta portátil do Windows (e o zip) |
 | `requirements-windows.lock` | Versões exatas + hashes da pasta portátil |
+| `requirements-build-windows.txt` | `setuptools` para compilar o `proxy-tools` (só tem código-fonte) |
 | `release.py` | Regras da Release (tag × `VERSAO`, nome do zip, notas) |
 | `.github/workflows/windows.yml` | Build, testes e Release no GitHub Actions |
 | `tests/` + `requirements-dev.txt` | Testes (`pytest`), com fichas fictícias |
