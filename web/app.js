@@ -1,7 +1,17 @@
 "use strict";
 
 const $ = (id) => document.getElementById(id);
-const state = { origem: null, file: null, origens: [], ultimo: null };
+const state = { origem: null, file: null, origens: [], ultimo: null, formato: "xlsx" };
+
+/* ---------- formato de saída (xlsx / json) ---------- */
+document.querySelectorAll("#formato-grupo .formato-opt").forEach((btn) => {
+  btn.addEventListener("click", () => {
+    state.formato = btn.dataset.formato;
+    document.querySelectorAll("#formato-grupo .formato-opt").forEach((b) =>
+      b.classList.toggle("is-ativo", b === btn)
+    );
+  });
+});
 
 /* ---------- tema ---------- */
 function aplicarTema(dark) {
@@ -213,6 +223,7 @@ $("btn-converter").addEventListener("click", async () => {
   const fd = new FormData();
   fd.append("pdf", state.file);
   fd.append("origem", state.origem);
+  fd.append("formato", state.formato);
 
   try {
     mostrarProgresso({ etapa: "Enviando o PDF" });
@@ -227,7 +238,7 @@ $("btn-converter").addEventListener("click", async () => {
     mostrarErro("Não consegui falar com o servidor. Tente de novo.", "erro");
   }
 
-  btn.textContent = "Converter para Excel";
+  btn.textContent = "Converter";
   atualizarPassos();
 });
 

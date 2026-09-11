@@ -240,6 +240,20 @@ h1{ font-size:24px; font-weight:700; margin:0; letter-spacing:-.01em; }
 .dropzone.tem-arquivo .dz-icon{ opacity:1; }
 .file-chosen{ color:hsl(var(--success)); font-weight:600; word-break:break-all; }
 
+/* ---------- seletor de formato (xlsx / json) ---------- */
+.formato-grupo{ display:flex; gap:8px; }
+.formato-opt{
+  flex:1; padding:9px 12px; border-radius:var(--radius);
+  border:1.5px solid hsl(var(--border)); background:hsl(var(--background));
+  color:hsl(var(--muted-foreground)); font:inherit; font-weight:600; font-size:13px;
+  cursor:pointer; transition:border-color .15s, background .15s, color .15s;
+}
+.formato-opt:hover{ border-color:hsl(var(--ring)); }
+.formato-opt.is-ativo{
+  border-color:hsl(var(--accent)); background:hsl(var(--accent) / .15);
+  color:hsl(var(--foreground));
+}
+
 /* ---------- botões ---------- */
 .btn{
   font-weight:600; cursor:pointer;

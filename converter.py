@@ -18,6 +18,7 @@ Reconhece dois layouts automaticamente:
 from __future__ import annotations
 
 import argparse
+import json
 import os
 import re
 import sys
@@ -1838,10 +1839,26 @@ def _noop_progresso(etapa: str, atual: int = 0, total: int = 0) -> None:
     """Callback de progresso padrão: não faz nada."""
 
 
-def converter(pdf_path: Path, out_path: Path, origem: str, progresso=None) -> dict:
-    """Converte o PDF em .xlsx conforme a origem escolhida ('serra' ou 'estado').
-    Retorna um resumo; levanta ConversaoError quando o PDF não pode ser convertido
-    ou quando não corresponde à origem escolhida.
+FORMATOS_SAIDA = ("xlsx", "json")
+
+
+def converter(
+    pdf_path: Path, out_path: Path, origem: str, progresso=None, formato: str | None = None
+) -> dict:
+    """Converte o PDF conforme a origem escolhida ('serra' ou 'estado') e grava
+    o resultado em `out_path` no formato pedido: **xlsx** (planilha, aba
+    "Proventos") ou **json**. Sem `formato`, é deduzido pela extensão de
+    `out_path` (`.json` → json; qualquer outra coisa → xlsx).
+
+    Os dois formatos carregam a MESMA informação — uma linha por Ano+Mês, uma
+    coluna/campo por rubrica — só muda a embalagem. O JSON é um objeto com os
+    metadados de sempre (`origem`, `layout`, `anos`, `avisos`, ...) mais
+    `colunas` (ordem das rubricas) e `proventos` (lista de linhas, cada uma
+    `{"Ano":, "Mês":, "<rubrica>": valor, ...}` — mesmas chaves do cabeçalho
+    da planilha).
+
+    Retorna um resumo; levanta ConversaoError quando o PDF não pode ser
+    convertido ou quando não corresponde à origem escolhida.
 
     `progresso(etapa, atual, total)` é chamado ao longo da conversão para quem
     quiser mostrar andamento (a versão web usa isso). Conversão por OCR leva
@@ -1849,6 +1866,9 @@ def converter(pdf_path: Path, out_path: Path, origem: str, progresso=None) -> di
     origem = (origem or "").lower()
     if origem not in ORIGENS:
         raise ValueError(f"origem inválida: {origem!r} (use 'serra' ou 'estado')")
+    formato = (formato or Path(out_path).suffix.lstrip(".").lower() or "xlsx")
+    if formato not in FORMATOS_SAIDA:
+        raise ValueError(f"formato inválido: {formato!r} (use {' ou '.join(FORMATOS_SAIDA)})")
     prog = progresso or _noop_progresso
     prog("Abrindo o PDF", 0, 0)
 
@@ -1953,18 +1973,39 @@ def converter(pdf_path: Path, out_path: Path, origem: str, progresso=None) -> di
 
     anos = sorted({b["ano"] for b in blocos})
 
-    wb = openpyxl.Workbook()
-    ws = wb.active
-    ws.title = "Proventos"
-    ws.append(["Ano", "Mês"] + colunas)
-    for ano in anos:
-        for mes in MESES:
-            cel = consol.get((ano, mes), {})
-            ws.append([ano, mes] + [round(cel.get(c, 0.0), 2) for c in colunas])
-    wb.save(out_path)
+    # Linhas em comum aos dois formatos: uma por Ano+Mês, valores arredondados.
+    linhas = [
+        {"Ano": ano, "Mês": mes,
+         **{c: round(consol.get((ano, mes), {}).get(c, 0.0), 2) for c in colunas}}
+        for ano in anos for mes in MESES
+    ]
+
+    if formato == "json":
+        Path(out_path).write_text(
+            json.dumps({
+                "origem": ORIGENS[origem],
+                "layout": fmt,
+                "anos": anos,
+                "contratos": contratos,
+                "multiplos_blocos": len(contratos) > 1,
+                "avisos": list(dict.fromkeys(avisos)),
+                "colunas": colunas,
+                "proventos": linhas,
+            }, ensure_ascii=False, indent=2),
+            encoding="utf-8",
+        )
+    else:
+        wb = openpyxl.Workbook()
+        ws = wb.active
+        ws.title = "Proventos"
+        ws.append(["Ano", "Mês"] + colunas)
+        for linha in linhas:
+            ws.append([linha["Ano"], linha["Mês"]] + [linha[c] for c in colunas])
+        wb.save(out_path)
 
     return {
         "arquivo": str(out_path),
+        "formato": formato,
         "origem": ORIGENS[origem],
         "layout": fmt,
         "anos": anos,
@@ -1983,15 +2024,19 @@ def main():
         "-t", "--tipo", required=True, choices=("serra", "estado"),
         help="Origem da ficha: 'serra' (Prefeitura da Serra) ou 'estado' (Governo do Estado)",
     )
-    ap.add_argument("-o", "--out", type=Path, help="Arquivo .xlsx de saída")
+    ap.add_argument("-o", "--out", type=Path, help="Arquivo de saída (.xlsx ou .json)")
+    ap.add_argument(
+        "-f", "--formato", choices=FORMATOS_SAIDA,
+        help="Formato de saída; se omitido, é deduzido da extensão de -o (padrão xlsx)",
+    )
     args = ap.parse_args()
 
     if not args.pdf.exists():
         print(f"Arquivo não encontrado: {args.pdf}", file=sys.stderr)
         sys.exit(1)
-    out = args.out or args.pdf.with_suffix(".xlsx")
+    out = args.out or args.pdf.with_suffix("." + (args.formato or "xlsx"))
     try:
-        r = converter(args.pdf, out, args.tipo)
+        r = converter(args.pdf, out, args.tipo, formato=args.formato)
     except ConversaoError as e:
         print(f"Erro: {e}", file=sys.stderr)
         sys.exit(1)

@@ -34,10 +34,14 @@ from pathlib import Path
 
 from flask import Flask, Response, jsonify, request, send_file, send_from_directory
 
-from converter import ORIGENS, ConversaoError, converter, ocr_status
+from converter import FORMATOS_SAIDA, ORIGENS, ConversaoError, converter, ocr_status
 
 VERSAO = "1.1"
 MAX_MB = 25
+MIMETIPOS = {
+    "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+    "json": "application/json",
+}
 JOB_TTL = 20 * 60      # tempo máximo que um resultado fica disponível (s)
 JOB_FAXINA = 2 * 60    # intervalo da faxina (s)
 
@@ -89,13 +93,14 @@ def _apagar(*caminhos) -> None:
             pass
 
 
-def _rodar(jid: str, entrada: Path, saida: Path, origem: str, nome: str) -> None:
+def _rodar(jid: str, entrada: Path, saida: Path, origem: str, nome: str,
+           formato: str) -> None:
     """Converte fora do ciclo da requisição e guarda o resultado no job."""
     def progresso(etapa: str, atual: int = 0, total: int = 0) -> None:
         _set(jid, etapa=etapa, atual=atual, total=total)
 
     try:
-        resumo = converter(entrada, saida, origem, progresso=progresso)
+        resumo = converter(entrada, saida, origem, progresso=progresso, formato=formato)
         resumo.pop("arquivo", None)  # caminho no servidor, não interessa ao cliente
         _set(jid, estado="pronto", etapa="Pronto", saida=str(saida),
              nome=nome, resumo=resumo)
@@ -193,6 +198,7 @@ def api_converter():
     """Enfileira a conversão e devolve o id do job (não converte aqui)."""
     arq = request.files.get("pdf")
     origem = (request.form.get("origem") or "").strip()
+    formato = (request.form.get("formato") or "xlsx").strip().lower()
 
     if arq is None or not arq.filename:
         return jsonify({"erro": "Nenhum arquivo enviado."}), 400
@@ -200,9 +206,11 @@ def api_converter():
         return jsonify({"erro": "O arquivo precisa ser um PDF."}), 400
     if origem not in ORIGENS:
         return jsonify({"erro": "Escolha a origem da ficha."}), 400
+    if formato not in FORMATOS_SAIDA:
+        return jsonify({"erro": "Formato de saída inválido."}), 400
 
     fd_in, cin = tempfile.mkstemp(suffix=".pdf")
-    fd_out, cout = tempfile.mkstemp(suffix=".xlsx")
+    fd_out, cout = tempfile.mkstemp(suffix="." + formato)
     os.close(fd_in)
     os.close(fd_out)
     p_in, p_out = Path(cin), Path(cout)
@@ -213,9 +221,9 @@ def api_converter():
         return jsonify({"erro": "Não consegui ler o arquivo enviado."}), 400
 
     jid = _novo_job()
-    nome = Path(arq.filename).stem + ".xlsx"
+    nome = Path(arq.filename).stem + "." + formato
     threading.Thread(
-        target=_rodar, args=(jid, p_in, p_out, origem, nome), daemon=True
+        target=_rodar, args=(jid, p_in, p_out, origem, nome, formato), daemon=True
     ).start()
     return jsonify({"job": jid}), 202
 
@@ -252,11 +260,12 @@ def api_job_arquivo(jid: str):
         nome = job.get("nome") if job else None
     if not saida or not Path(saida).exists():
         return jsonify({"erro": "Arquivo não disponível (ou já expirou)."}), 404
+    formato = Path(nome).suffix.lstrip(".").lower()
     return send_file(
         saida,
         as_attachment=True,
         download_name=nome,
-        mimetype="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        mimetype=MIMETIPOS.get(formato, "application/octet-stream"),
     )
 
 

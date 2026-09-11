@@ -49,7 +49,7 @@
 
       <div class="page-head">
         <h1>Converter ficha financeira</h1>
-        <p class="page-sub">Transforme o PDF da ficha em uma planilha Excel dos proventos por mês.</p>
+        <p class="page-sub">Transforme o PDF da ficha nos proventos por mês, em Excel ou JSON.</p>
         <p class="page-note">
           <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"/><path d="M9 12l2 2 4-4"/></svg>
           Processado na hora — nada fica salvo no servidor.
@@ -59,7 +59,7 @@
       <ol class="steps" id="steps">
         <li data-step="origem"><span class="dot">1</span>Origem</li>
         <li data-step="arquivo"><span class="dot">2</span>Arquivo PDF</li>
-        <li data-step="baixar"><span class="dot">3</span>Baixar Excel</li>
+        <li data-step="baixar"><span class="dot">3</span>Baixar</li>
       </ol>
 
       <section class="panel" id="painel-ajuda" hidden>
@@ -67,7 +67,7 @@
         <ol class="ajuda-list">
           <li>Escolha a <strong>origem</strong> da ficha — Município da Serra ou Estado do Espírito Santo.</li>
           <li>Escolha ou arraste o <strong>PDF</strong> da ficha financeira.</li>
-          <li>Clique em <strong>Converter para Excel</strong>. O download começa sozinho.</li>
+          <li>Escolha o <strong>formato</strong> (Excel ou JSON) e clique em <strong>Converter</strong>. O download começa sozinho.</li>
         </ol>
         <p class="ajuda-nota">O PDF é processado na hora e descartado — nada fica salvo no servidor.</p>
         <p class="ajuda-nota"><strong>Ficha escaneada</strong> (imagem, sem texto selecionável) também converte, por leitura de imagem — leva de 1 a 2 minutos e a tela mostra o andamento. Nesse caso <strong>confira os valores contra o PDF</strong>: cada verba é conferida contra a coluna TOTAL da ficha, e o que não fecha aparece como aviso.</p>
@@ -91,9 +91,14 @@
           </label>
           <input type="file" id="pdf-input" accept="application/pdf,.pdf">
         </div>
+        <p class="field-hint" style="margin-top:14px">Formato de saída</p>
+        <div class="formato-grupo" id="formato-grupo" role="radiogroup" aria-label="Formato de saída">
+          <button type="button" class="formato-opt is-ativo" data-formato="xlsx">Excel (.xlsx)</button>
+          <button type="button" class="formato-opt" data-formato="json">JSON (.json)</button>
+        </div>
       </section>
 
-      <button class="btn-primary" id="btn-converter" type="button" disabled>Converter para Excel</button>
+      <button class="btn-primary" id="btn-converter" type="button" disabled>Converter</button>
 
       <section class="card result-card" id="result-card" hidden>
         <div class="result" id="result"></div>
@@ -102,6 +107,6 @@
     </div>
   </main>
 </div>
-<script src="app.js?v=5"></script>
+<script src="app.js?v=6"></script>
 </body>
 </html>
