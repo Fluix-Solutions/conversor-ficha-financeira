@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/build-windows/design.md`
-**Status**: Done (aguardando 2ª verificação e gate CI)
+**Status**: Done (gate CI verde; aguardando 2ª verificação)
 
 ---
 
@@ -413,7 +413,7 @@ T9 → T10 → T11 → T12 → T13 → T14
 - [x] `on.pull_request` com `branches: [main]` e `paths` cobrindo `converter.py`, `server.py`, `app_desktop.py`, `web/**`, `construir_portatil.py`, `release.py`, `requirements*`, `tests/**` e o próprio workflow
 - [x] `release` continua com `if: github.event_name == 'push' || inputs.publicar` (falso em PR)
 - [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
-- [ ] Gate CI: o PR `build-windows → main` roda o job `build` verde no Windows e o job `release` fica pulado
+- [x] Gate CI: o PR `build-windows → main` roda o job `build` verde no Windows e o job `release` fica pulado (run 34632113906)
 
 **Tests**: none
 **Gate**: build
@@ -441,7 +441,7 @@ T9 → T10 → T11 → T12 → T13 → T14
 - [x] `tests/test_lock.py`: `setuptools` no lock; os pacotes de `requirements-build-windows.txt` também são cobertos
 - [x] `tests/test_construir.py`: o `main` executa duas instalações, as duas com `--require-hashes`; a 1ª só com o bloco `setuptools==` tirado do lock (com `--hash`); a 2ª com `-r requirements-windows.lock` e `--no-build-isolation`
 - [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
-- [ ] Gate CI: job `build` verde no PR
+- [x] Gate CI: job `build` verde no PR (run 34632113906; 1ª tentativa, run 34631686098, falhou no `proxy-tools` — motivo desta tarefa)
 
 **Tests**: unit
 **Gate**: build
