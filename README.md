@@ -1,8 +1,9 @@
 # Conversor de Ficha Financeira (PDF → Excel)
 
-Converte a Ficha Financeira (Prefeitura da Serra **ou** Governo do Estado do
-ES) em uma planilha `.xlsx` com os **Proventos** por mês: uma linha por
-`Ano + Mês`, uma coluna por rubrica (só o nome da verba, sem o código).
+Converte a Ficha Financeira (Prefeitura da Serra, Governo do Estado do ES
+**ou** Prefeitura de Vitória) em uma planilha `.xlsx` com os **Proventos** por
+mês: uma linha por `Ano + Mês`, uma coluna por rubrica (só o nome da verba,
+sem o código).
 
 ## Instalação (uma vez)
 
@@ -44,8 +45,8 @@ mantidos como reserva.
 python converter.py "FF 1.pdf" -t serra
 ```
 
-`-t` / `--tipo` é obrigatório: `serra` ou `estado`. Para escolher o nome da
-saída: `python converter.py "FF 1.pdf" -t serra -o "saida.xlsx"`.
+`-t` / `--tipo` é obrigatório: `serra`, `estado` ou `vitoria`. Para escolher o
+nome da saída: `python converter.py "FF 1.pdf" -t serra -o "saida.xlsx"`.
 
 ## Layouts
 
@@ -73,6 +74,15 @@ FINANCEIRA" e "FICHA FINANCEIRA POR FUNCIONÁRIO". Linhas
 (`1,234.56`). O nome da rubrica vem do próprio PDF. Se o arquivo tiver mais
 de um servidor, o programa junta tudo e mostra um aviso.
 
+**V — Prefeitura Municipal de Vitória.** Um ano por página, cabeçalho
+`VALORES PARA O ANO`, rubricas com código de 4 dígitos
+(`1002 - VENCIMENTO`). Entram na planilha as duas seções de vantagens do ano —
+`MOVIMENTO NORMAL` e `MOVIMENTO DÉCIMO` (13º salário). A seção **`VALOR BASE`**
+que aparece no meio da ficha é a base de cálculo do IRRF/IPAMV, **não** é
+provento, e é ignorada. Se o arquivo tiver mais de um servidor, junta tudo e
+avisa. Fichas de Vitória **escaneadas** ainda não são suportadas (só as
+exportadas com texto).
+
 A planilha tem sempre **uma linha por Ano + Mês**. Se a pessoa teve **mais de um
 contrato (matrícula)** e dois deles pagaram no mesmo mês, os valores da mesma
 verba são **somados**.
@@ -90,9 +100,10 @@ verba são **somados**.
 ## Limitações
 
 - Extrai apenas **Proventos** (não Descontos nem Outros).
-- **PDFs escaneados** (imagem, sem texto) são lidos por **OCR**, tanto da Serra
-  quanto do Estado — inclusive quando a folha foi digitalizada deitada ou de
-  cabeça para baixo (a orientação é detectada automaticamente). Nesse modo:
+- **PDFs escaneados** (imagem, sem texto) são lidos por **OCR** da Serra e do
+  Estado — inclusive quando a folha foi digitalizada deitada ou de cabeça para
+  baixo (a orientação é detectada automaticamente). **Vitória escaneada ainda
+  não é suportada** (dá erro explicando). Nesse modo:
   - cada rubrica é conferida contra a coluna **TOTAL** impressa na ficha, e o
     que não fecha vira aviso `CONFERIR`;
   - **sempre confira a planilha contra o PDF** antes de usar no cálculo;
@@ -197,7 +208,7 @@ Arquivos de deploy: `Dockerfile` (o que o Railway usa), `.dockerignore`,
 
 | Arquivo | Função |
 |---|---|
-| `converter.py` | Motor da conversão (`python converter.py PDF -t serra\|estado`) |
+| `converter.py` | Motor da conversão (`python converter.py PDF -t serra\|estado\|vitoria`) |
 | `server.py` + `web/` | Versão web (Flask) |
 | `app_web.py` + `ui/` | App de janela (pywebview, visual Valorizei) |
 | `app.py` | App de janela antigo (Tkinter) — reserva |

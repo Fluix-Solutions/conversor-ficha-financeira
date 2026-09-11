@@ -16,13 +16,17 @@ largo — uma linha por `Ano + Mês`, uma coluna por rubrica (só o nome da verb
   matrícula, revertido). Resumo retorna `contratos` (lista de matrículas) e
   `multiplos_blocos` (= há mais de um contrato).
 - **Seletor de origem obrigatório** (sem modo automático): `converter(pdf, out,
-  origem)` com `origem` ∈ chaves de `ORIGENS` (`serra` / `estado`); CLI
-  `-t serra|estado`. Rótulos em `converter.ORIGENS` ("Município da Serra",
-  "Estado do Espírito Santo") — o app importa esse dict e monta um
-  `ttk.Combobox` editável com filtro por texto (`_filtrar_origem`); o botão
-  Converter só habilita quando o texto casa com um rótulo (`_origem_chave`).
-  Mismatch origem×PDF → `ConversaoError`. Dentro de `serra`, `_detectar_formato`
-  distingue A vs B sozinho.
+  origem)` com `origem` ∈ chaves de `ORIGENS` (`serra` / `estado` / `vitoria`);
+  CLI `-t serra|estado|vitoria`. Rótulos em `converter.ORIGENS` ("Município da
+  Serra", "Estado do Espírito Santo", "Prefeitura de Vitória") — o app importa
+  esse dict e monta um `ttk.Combobox` editável com filtro por texto
+  (`_filtrar_origem`); o botão Converter só habilita quando o texto casa com um
+  rótulo (`_origem_chave`). **Nada mais precisa ser tocado para acrescentar uma
+  origem**: a tela web busca a lista em `GET /api/origens`, que devolve o dict.
+  Mismatch origem×PDF → `ConversaoError` montada por `_FMT_ORIGEM` (layout →
+  origem esperada) + `_ARTIGO_ORIGEM` (só para "ficha **do** Município" vs
+  "ficha **da** Prefeitura"). Dentro de `serra`, `_detectar_formato` distingue
+  A vs B sozinho.
 
 ## Arquivos
 
@@ -135,7 +139,7 @@ Electron não resolvem — é falta de assinatura de código). Os arquivos de bu
 `python app_web.py` / `python server.py` localmente.
 `app.py --selftest <serra|estado> <pdf>` ainda converte sem abrir janela.
 
-## Os layouts (`_detectar_formato` distingue A/B/C/D; "OCR" p/ scan)
+## Os layouts (`_detectar_formato` distingue A/B/C/D/V; "OCR" p/ scan)
 
 **PDF escaneado (imagem, sem texto)** — Estado e Serra. Detectado em
 `converter()`: o texto do carimbo do PJe (assinatura/URL/"Num.") é descartado
@@ -225,6 +229,36 @@ fecha vira aviso "CONFERIR". Sempre acrescenta o aviso "lida por OCR - confira".
   **Múltiplos servidores no mesmo PDF**: `_converter_formato_d` soma tudo por
   ano/mês e emite aviso "ATENÇÃO: N servidores diferentes". Decisão pendente
   com o usuário: `FF 01.pdf` tem 6 pessoas (arquivo de teste montado à mão?).
+
+- **V — Prefeitura Municipal de Vitória** (2026-09-11) —
+  `_converter_formato_vitoria`. Detecção: `"PREFEITURA MUNICIPAL DE VIT"`.
+  Texto limpo, acentos corretos (ao contrário de A/B), número BR, **código de
+  4 dígitos**, ano em `VALORES PARA O ANO AAAA`, servidor em
+  `SERVIDOR: <matrícula> - <NOME> LOCAL:`. Cabeçalho de meses em MAIÚSCULAS
+  (`JAN FEV ...`) → `_centros_meses_vitoria` (o `_centros_meses` dos outros
+  layouts compara em Title Case e não casaria).
+  O que o layout tem de diferente e por que o parser é como é:
+  - **Código + nome + os 12 valores estão na MESMA linha** (no layout A o
+    código fica numa linha e os valores em outra) → não existe estado
+    "codigo_atual" atravessando linhas: cada linha se resolve sozinha.
+  - Por ano há **duas** seções de vantagens: `MOVIMENTO NORMAL` e
+    `MOVIMENTO DÉCIMO` (13º). As duas entram (é o que soma o total impresso).
+  - Entre elas vêm Descontos e uma seção **`VALOR BASE`** (base de cálculo do
+    IRRF — repete os códigos 2500/2510 com valores MAIORES). Se ela entrasse,
+    a planilha inflaria silenciosamente. Por isso a captura é uma **máquina de
+    2 estados**: liga em qualquer linha `MOVIMENTO...`, desliga em
+    `TOTAL DE VANTAGEM`. Tudo que está fora desse intervalo (Descontos, Valor
+    Base, Totais, resumo do ano) é ignorado sem precisar reconhecer cada seção
+    pelo nome.
+  - Ano pode terminar numa 2ª página só com o resumo (`ANO: AAAA ...`): sem a
+    grade de meses a página é pulada (`len(centros) < 2`).
+  - Múltiplos servidores no mesmo PDF: soma e avisa, igual ao layout D.
+  - **Não há OCR para esta origem**: ficha de Vitória escaneada dá
+    `ConversaoError` explicando (antes caía no OCR da Serra e devolvia lixo ou
+    erro falando de outro município).
+  Conferido contra os totais impressos em `PDF/vitoria/FF 01/02 vitoria.pdf`:
+  72 células ano×mês, 0 divergência (o total do ano sozinho não prova nada —
+  valor no mês errado dá o mesmo total; ver `TOTAL DE VANTAGEM` linha a linha).
 
 ## Nomes de rubrica
 

@@ -1810,6 +1810,122 @@ def _converter_ocr_serra(caminho, avisos: list[str], progresso=None):
 
 
 # ----------------------------------------------------------------------------
+# Layout V - Prefeitura Municipal de Vitória
+# ----------------------------------------------------------------------------
+ANO_VITORIA_RE = re.compile(r"VALORES PARA O ANO\s+(\d{4})")
+# O nome vem junto da matrícula ("SERVIDOR: 152110 - FULANO DE TAL LOCAL: ..."),
+# e é ele que identifica o servidor no aviso quando o PDF traz mais de um.
+MATRICULA_VITORIA_RE = re.compile(r"SERVIDOR:\s*(\d+)\s*-\s*(.*?)(?:\s+LOCAL:|\s*$)", re.M)
+CODIGO_VITORIA_RE = re.compile(r"^\d{4}$")
+
+
+def _centros_meses_vitoria(linhas_w) -> dict[int, float]:
+    """Como `_centros_meses`, mas o cabeçalho vem em MAIÚSCULAS
+    ('EVENTO JAN FEV MAR ... DEZ TOTAIS')."""
+    melhor: dict[int, float] = {}
+    for grupo in linhas_w:
+        c: dict[int, float] = {}
+        for w in grupo:
+            nome = w["text"].upper()
+            for idx, mes in enumerate(MESES):
+                if nome[:3] == mes[:3].upper():
+                    c[idx] = (w["x0"] + w["x1"]) / 2
+        if len(c) > len(melhor):
+            melhor = c
+    return melhor
+
+
+def _converter_formato_vitoria(pdf, avisos: list[str]):
+    """Ficha da Prefeitura de Vitória: código de 4 dígitos, cabeçalho 'VALORES
+    PARA O ANO AAAA', e duas seções de vantagens por ano - 'MOVIMENTO NORMAL'
+    e 'MOVIMENTO DÉCIMO' (13º salário) - cada uma seguida de Descontos e
+    fechada por 'TOTAL DE VANTAGEM'/'TOTAL DE DESCONTO'. Depois do movimento
+    normal ainda vem uma seção 'VALOR BASE' (base de cálculo do IRRF, não é
+    provento). Diferente do layout A, código+nome+valores do mês estão todos
+    na MESMA linha, então uma máquina de 2 estados (dentro/fora de
+    'MOVIMENTO...TOTAL DE VANTAGEM') decide o que entra, sem precisar
+    reconhecer cada seção pelo nome."""
+    blocos = []
+    servidor_atual: str | None = None
+
+    for page in pdf.pages:
+        words = page.extract_words(use_text_flow=False)
+        if not words:
+            continue
+        for w in words:
+            w["text"] = decode_cid(w["text"])
+
+        texto = decode_cid(page.extract_text() or "")
+        m = ANO_VITORIA_RE.search(texto)
+        if not m:
+            continue
+        ano = int(m.group(1))
+        mm = MATRICULA_VITORIA_RE.search(texto)
+        if mm:
+            servidor_atual = " ".join(p for p in mm.groups() if p).strip()
+
+        linhas = agrupar_linhas(words, lambda w: w["top"])
+        centros = _centros_meses_vitoria(linhas)
+        if len(centros) < 2:
+            continue  # página de continuação (só o resumo do ano)
+        x_max = max(centros.values()) + 22
+
+        dados = {mes: {} for mes in MESES}
+        ordem: list[str] = []
+        capturando = False
+        for grupo in linhas:
+            grupo = sorted(grupo, key=lambda w: w["x0"])
+            textos = [w["text"] for w in grupo]
+            plano = "".join(textos)
+            if plano.startswith("MOVIMENTO"):
+                capturando = True
+                continue
+            if plano.startswith("TOTALDEVANTAGEM"):
+                capturando = False
+                continue
+            if not capturando or not (textos and CODIGO_VITORIA_RE.match(textos[0])):
+                continue
+
+            codigo = textos[0]
+            nome = limpar_nome(
+                " ".join(t for t in textos[1:] if t != "-" and not VALOR_RE.match(t))
+            )
+            if "?" in nome:
+                avisos.append(f"Nome incompleto (acento): {codigo} '{nome}'.")
+            coluna = _coluna(codigo, nome)
+            if coluna not in ordem:
+                ordem.append(coluna)
+            for w in grupo:
+                if not VALOR_RE.match(w["text"]):
+                    continue
+                xc = (w["x0"] + w["x1"]) / 2
+                if xc > x_max:
+                    continue
+                idx = min(centros, key=lambda i: abs(centros[i] - xc))
+                if abs(centros[idx] - xc) > 20:
+                    continue
+                dados[MESES[idx]][coluna] = dados[MESES[idx]].get(coluna, 0.0) + parse_valor(w["text"])
+
+        if ordem:
+            blocos.append({
+                "ano": ano,
+                "dados": dados,
+                "ordem": ordem,
+                "rotulo": servidor_atual or "Contrato 1",
+            })
+
+    nomes = list(dict.fromkeys(b["rotulo"] for b in blocos))
+    if len(nomes) > 1:
+        avisos.append(
+            f"ATENÇÃO: este PDF contém {len(nomes)} servidores diferentes "
+            f"({', '.join(nomes)}). A planilha juntou TODOS por ano/mês. "
+            "Se cada servidor é um processo/cálculo separado, gere um PDF por "
+            "servidor e converta um de cada vez."
+        )
+    return blocos
+
+
+# ----------------------------------------------------------------------------
 def _detectar_formato(pdf) -> str:
     bruto = ""
     amostra = ""
@@ -1821,6 +1937,8 @@ def _detectar_formato(pdf) -> str:
         return "D"
     if "HIJK$LMNJOJPI" in bruto or "\nfls. " in bruto:
         return "C"
+    if "PREFEITURA MUNICIPAL DE VIT" in bruto:
+        return "V"
     return "B" if "Evento:" in amostra else "A"
 
 
@@ -1832,7 +1950,13 @@ class ConversaoError(Exception):
 ORIGENS = {
     "serra": "Município da Serra",
     "estado": "Estado do Espírito Santo",
+    "vitoria": "Prefeitura de Vitória",
 }
+
+# Layout -> origem esperada, para a mensagem de "seletor errado".
+_FMT_ORIGEM = {"A": "serra", "B": "serra", "C": "estado", "D": "estado", "V": "vitoria"}
+# Artigo de cada origem, para compor "uma ficha {artigo} {ORIGENS[x]}" na mensagem.
+_ARTIGO_ORIGEM = {"serra": "do", "estado": "do", "vitoria": "da"}
 
 
 def _noop_progresso(etapa: str, atual: int = 0, total: int = 0) -> None:
@@ -1897,6 +2021,14 @@ def converter(
                     _uteis.append(_s)
         tem_texto = len("\n".join(_uteis)) > 300
         if not tem_texto:
+            if origem == "vitoria":
+                # Não há leitura por imagem para este layout (só Serra e Estado).
+                raise ConversaoError(
+                    f"Este PDF da {ORIGENS['vitoria']} é uma digitalização (imagem, "
+                    "sem texto selecionável) e ainda não há leitura por imagem para "
+                    "esta origem.\n"
+                    "Peça o PDF exportado direto do sistema (com texto selecionável)."
+                )
             if origem == "estado":
                 # Ficha do Estado escaneada: converte por OCR da imagem.
                 blocos = _converter_ocr(pdf_path, avisos, prog)
@@ -1911,17 +2043,12 @@ def converter(
             fmt = _detectar_formato(pdf)
 
         if not blocos:  # ainda não veio pelo OCR
-            if origem == "serra" and fmt in ("C", "D"):
+            esperado = _FMT_ORIGEM.get(fmt)
+            if esperado and esperado != origem:
                 raise ConversaoError(
-                    f"Você escolheu '{ORIGENS['serra']}', mas este PDF parece ser "
-                    f"uma ficha do {ORIGENS['estado']}.\n"
-                    f"Troque o seletor para '{ORIGENS['estado']}' e converta de novo."
-                )
-            if origem == "estado" and fmt not in ("C", "D"):
-                raise ConversaoError(
-                    f"Você escolheu '{ORIGENS['estado']}', mas este PDF parece ser "
-                    f"uma ficha do {ORIGENS['serra']}.\n"
-                    f"Troque o seletor para '{ORIGENS['serra']}' e converta de novo."
+                    f"Você escolheu '{ORIGENS[origem]}', mas este PDF parece ser "
+                    f"uma ficha {_ARTIGO_ORIGEM[esperado]} {ORIGENS[esperado]}.\n"
+                    f"Troque o seletor para '{ORIGENS[esperado]}' e converta de novo."
                 )
 
             if origem == "estado":
@@ -1930,6 +2057,8 @@ def converter(
                     if fmt == "D"
                     else _converter_formato_c(pdf, avisos, pdf_path, prog)
                 )
+            elif origem == "vitoria":
+                blocos = _converter_formato_vitoria(pdf, avisos)
             elif fmt == "A":
                 matricula_atual = None
                 for page in pdf.pages:
@@ -1943,11 +2072,12 @@ def converter(
                 blocos = _converter_formato_b(pdf, avisos)
 
     if not blocos:
-        alvo = (
-            f"uma 'Relação Ficha Financeira' do {ORIGENS['serra']}"
-            if origem == "serra"
-            else f"uma 'Ficha Financeira' do {ORIGENS['estado']} (SIARHES)"
-        )
+        if origem == "serra":
+            alvo = f"uma 'Relação Ficha Financeira' do {ORIGENS['serra']}"
+        elif origem == "estado":
+            alvo = f"uma 'Ficha Financeira' do {ORIGENS['estado']} (SIARHES)"
+        else:
+            alvo = f"uma 'Ficha Financeira' da {ORIGENS['vitoria']}"
         raise ConversaoError(
             "Não encontrei nenhuma seção de Proventos/Vantagens neste PDF.\n"
             f"Confirme que o arquivo é {alvo} e que o seletor está na origem certa."
@@ -2021,8 +2151,9 @@ def main():
     ap = argparse.ArgumentParser(description="Converte Ficha Financeira PDF em Excel.")
     ap.add_argument("pdf", type=Path, help="Caminho do PDF da ficha financeira")
     ap.add_argument(
-        "-t", "--tipo", required=True, choices=("serra", "estado"),
-        help="Origem da ficha: 'serra' (Prefeitura da Serra) ou 'estado' (Governo do Estado)",
+        "-t", "--tipo", required=True, choices=("serra", "estado", "vitoria"),
+        help="Origem da ficha: 'serra' (Prefeitura da Serra), 'estado' (Governo do "
+             "Estado) ou 'vitoria' (Prefeitura de Vitória)",
     )
     ap.add_argument("-o", "--out", type=Path, help="Arquivo de saída (.xlsx ou .json)")
     ap.add_argument(
