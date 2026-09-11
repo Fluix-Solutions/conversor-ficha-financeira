@@ -19,3 +19,12 @@
 - **Status**: active
 
 ## Handoff
+
+- **Feature**: `.specs/features/build-windows/`
+- **Phase / Task**: Execute concluído (T1-T16); Verifier rodada 3 = PASS
+- **Completed**: T1-T16; CI Windows verde no PR #1 (runs 34632113906, 34633772453)
+- **In-progress** (file:line): nenhum
+- **Next step**: usuário faz UAT do zip do artefato com Smart App Control; depois merge do PR #1 e publicação da v1.1 (tag ou Run workflow com `publicar`) — conferências pós-merge listadas em `validation.md`
+- **Blockers**: nenhum (merge e publicação dependem de ok explícito do usuário)
+- **Uncommitted files**: nenhum
+- **Branch**: `build-windows` (PR #1 → `main`)

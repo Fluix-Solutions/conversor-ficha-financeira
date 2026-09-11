@@ -56,6 +56,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: WIN-23 spec.md:73 (ci-workflow)
 - last seen: 2026-09-11T18:28:38Z
 
+### L-008 - Move branching shell logic out of CI workflow steps into a tested script, or test the extracted step body, because lint alone does not catch an inverted guard
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `ci-workflow` · harmful: 0
+- features: build-windows
+- evidence: M13 .github/workflows/windows.yml:88 (WIN-22/23/24; M14/M15 :78) (ci-workflow)
+- last seen: 2026-09-11T18:43:36Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

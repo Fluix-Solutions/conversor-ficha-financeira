@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/build-windows/design.md`
-**Status**: In Progress (correções da 2ª rodada)
+**Status**: Done — Verifier rodada 3: PASS (pendências só pós-merge, ver validation.md)
 
 ---
 
@@ -474,7 +474,7 @@ T15 → T16
 - [x] Variável `PUBLICA` no passo da tag = `github.event_name == 'push' || inputs.publicar`; `gh api` + `--sha-tag` só com `PUBLICA=true`
 - [x] Simulação local do passo: com `PUBLICA=false` e a tag existindo noutro commit, passa; com `PUBLICA=true`, falha mostrando os dois commits
 - [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
-- [ ] Gate CI: PR verde
+- [x] Gate CI: PR verde (run 34633772453)
 
 **Tests**: none
 **Gate**: build

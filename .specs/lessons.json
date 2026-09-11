@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 8,
+  "next_id": 9,
   "lessons": [
     {
       "id": "L-001",
@@ -130,6 +130,24 @@
       ],
       "created": "2026-09-11T18:28:38Z",
       "last_seen": "2026-09-11T18:28:38Z"
+    },
+    {
+      "id": "L-008",
+      "key": "surviving_mutant::move branching shell logic out of ci workflow steps into a tested script or test the extracted step body because lint alone does not catch an inverted guard",
+      "text": "Move branching shell logic out of CI workflow steps into a tested script, or test the extracted step body, because lint alone does not catch an inverted guard",
+      "signal": "surviving_mutant",
+      "scope": "ci-workflow",
+      "status": "candidate",
+      "features": [
+        "build-windows"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M13 .github/workflows/windows.yml:88 (WIN-22/23/24; M14/M15 :78) (ci-workflow)"
+      ],
+      "created": "2026-09-11T18:43:36Z",
+      "last_seen": "2026-09-11T18:43:36Z"
     }
   ]
 }

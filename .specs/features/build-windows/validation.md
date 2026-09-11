@@ -1,36 +1,46 @@
-# Build Windows Validation (rodada 2)
+# Build Windows Validation (rodada 3)
 
-## Validation: build-windows - FAIL
+## Validation: build-windows - PASS
 
 **Date**: 2026-09-11
-**Spec**: `.specs/features/build-windows/spec.md` (WIN-01..WIN-25)
-**Diff range**: feature inteira `main..build-windows` (4888924..a804d83, 17 commits); correções desde a rodada 1: `053e45e..a804d83` (e614080, f1d00c5, 4d794aa, 39c7e9e, 6ebf207, 3ae38e7, c32eb9e, a804d83)
-**Verifier**: sub-agente independente (autor ≠ verificador), rodada 2 de no máximo 3
+**Spec**: `.specs/features/build-windows/spec.md` (WIN-01..WIN-25; WIN-23 reescrito na rodada 3 para valer só em execução que publica)
+**Diff range**: feature inteira `main..build-windows` (4888924..7983506, 21 commits); correções da rodada 3: `f6d99fd..7983506` (70e4392 `fix(ci)`, 7983506 `docs(windows)`)
+**Verifier**: sub-agente independente (autor ≠ verificador), rodada 3 de no máximo 3
 
-Veredito: **FAIL**. Todos os gaps da rodada 1 foram resolvidos, os 6 mutantes desta rodada morreram (inclusive M5 e M6, que sobreviveram na rodada 1), o gate passa (36/36) e o CI no Windows ficou verde com o Python da pasta. Mas a checagem nova de "tag já existente em outro commit" (WIN-23) roda em **toda** execução, inclusive nas que só testam. Depois da 1ª Release, todo PR para a `main` (e todo "Run workflow" com `publicar` desmarcado) num commit diferente do da tag vai falhar no 3º passo sem rodar o build, até alguém subir o `VERSAO`. Isso quebra WIN-22 e WIN-24, e a própria spec se contradiz (WIN-23 não diz a que execuções se aplica).
+Veredito: **PASS**. O G1 (a checagem tag×commit rodava em execuções que só testam) está corrigido: o passo da tag só consulta o commit da tag quando a execução publica. O run 34633772453 (PR, HEAD 7983506) comprova isso no Windows: `PUBLICA` vazio e a 2ª chamada de `release.py tag` não aparece no log. A simulação local, que roda o corpo real do passo tirado do YAML com um `gh` falso, mostra que PR e `publicar=false` passam mesmo com a tag em outro commit, e que a execução que publica falha mostrando os dois commits. O gate passa (36/36, `py_compile` e `actionlint` ok). Os 2 mutantes de regressão no código morreram. Os 3 mutantes no YAML sobreviveram à suíte, o que era esperado pela matriz de cobertura acordada ("none (lint)"); fica registrado como limitação conhecida, com recomendação abaixo. A documentação (G2) foi corrigida. O G3, que é cosmético, foi para as Deferred Ideas, e aceito isso.
 
-Critério usado para `Verified` na rastreabilidade: **(a)** asserção de teste que mira o valor da spec (e, quando mutada, é morta), **ou (b)** execução real no CI Windows com linha de log citável. Evidência só estática (YAML) conta como `Verified` apenas para ACs declarativos (permissões, conteúdo de documentação). Os caminhos de runtime que nunca executaram (job `release`, `workflow_dispatch`, push de tag) ficam `Implementing` com "estrutura verificada; execução pendente (só ocorre após merge/tag)".
+Cinco ACs ficam com execução pendente **por desenho**, porque só rodam depois do merge ou com a 1ª tag: WIN-01, WIN-11, WIN-14, WIN-22 e o ramo "publica" do WIN-23. Nenhum defeito de lógica foi encontrado neles. A lista de conferências pós-merge está no fim deste relatório.
+
+**Critério para `Verified` na rastreabilidade** (o mesmo da rodada 2): **(a)** uma asserção de teste que mira o valor definido na spec (e que, quando mutada, é morta), **ou (b)** uma execução real no CI Windows com linha de log citável. Evidência só estática (YAML ou texto) conta como `Verified` apenas para ACs declarativos (permissões, conteúdo de documentação). Caminhos de runtime que nunca executaram ficam como `Implementing` com a nota "estrutura verificada; execução pendente pós-merge", sem contar como gap.
 
 Fontes de evidência de CI (repo `Fluix-Solutions/conversor-ficha-financeira`):
-- **Run 34632113906** (pull_request, commit c32eb9e; checkout do merge 5586d6f): job `build` success em todos os passos, job `release` **skipped**. Log salvo em `scratchpad/run2.log` (citado como `run2.log:N`).
-- **Run 34631686098** (pull_request, commit 3ae38e7): job `build` falhou em "Monta a pasta e o zip", upload **skipped**, `release` skipped, **0 artefatos** (`gh api .../runs/34631686098/artifacts` → `total_count: 0`). Linhas citadas de `gh run view 34631686098 --log-failed`.
-- Artefato 10277020812 baixado pela API e inspecionado (depois apagado do rascunho): SHA-256 `ba718e86…4ff9`, 4566 entradas, raiz única.
-- `gh api .../tags` → vazio; `gh release list` → vazio (nenhuma tag nem Release criada pelos runs).
+- **Run 34633772453** (pull_request, `headSha` 7983506 = HEAD; checkout do merge `1fd53c2`): job `build` success em todos os passos, job `release` **skipped**. Log em `scratchpad/run3.log`, citado como `run3.log:N`. Artefato 10277047881: `digest sha256:1589bee2…4555` (igual a `run3.log:378`), `expires_at` = criação + 14 dias.
+- **Run 34632113906** (rodada 2, commit c32eb9e), citado como `run2.log:N`, e **run 34631686098** (falha real, 0 artefatos). Os dois continuam valendo: o código e os testes não mudaram desde a804d83 (`git diff --quiet a804d83..HEAD -- tests release.py construir_portatil.py requirements-windows.lock requirements-build-windows.txt` → sem diferença).
+- `gh api .../tags` → `0`; `gh release list` → vazio.
 
 ---
 
-## Rodada 1 → Rodada 2
+## Rodada 2 → Rodada 3
 
-| Gap da rodada 1 | Correção | Evidência | Situação |
+| Gap da rodada 2 | Correção | Evidência | Situação |
 | --------------- | -------- | --------- | -------- |
-| Fix 1: sem caminho que não publique; README sem "testar sem publicar" (WIN-20); o gate CI publicaria a `v1.1` | T11: input `publicar` (`.github/workflows/windows.yml:33-38`), `release` com `if: github.event_name == 'push' \|\| inputs.publicar` (`:119`); T13: gatilho `pull_request` (`:21-32`); T12: `README.md:129-134` | Run 34632113906: `release` skipped; `gh api .../tags` e `gh release list` vazios | ✅ Resolvido (com o gap novo G1 abaixo) |
-| Fix 2: M5 sobreviveu (WIN-16 no `main` sem teste) | T9/T14: `tests/test_construir.py:96-135` roda o `main` inteiro e afirma o que ele executa | M5 morto (ver sensor); CI `run2.log:216-221`: 1º o setuptools de `_tmp\setuptools.txt`, depois cada pacote `from -r ...requirements-windows.lock (line N)` | ✅ Resolvido |
-| Fix 3: M6 sobreviveu (ramo `--zip` sem teste) | T9: `tests/test_construir.py:144-150` | M6 morto; CI `run2.log:332-374` (pacotes, tamanho, sha256) | ✅ Resolvido |
-| Fix 4: tag `v<VERSAO>` já existente em outro commit prenderia a Release (WIN-01) | T10: `release.py:51-59`; T11: `.github/workflows/windows.yml:84-89` | `tests/test_release.py:43-72`; M9 morto; ramo "tag inexistente" executado no CI (`run2.log:165`) | ✅ Resolvido, mas **sem escopo** → G1 |
-| Fix 5a: WIN-02 sem afirmação da pasta montada | `tests/test_construir.py:137-142` | Teste + artefato real (ver WIN-02) | ✅ Resolvido |
-| Fix 5b: `CLAUDE.md` afirmava OCR "(Mac e Windows)" | T12 trocou por "No Windows, só depois do 1º run" | `CLAUDE.md:180-181` — agora **desatualizado** (o CI já rodou e passou) | ⚠️ Obs. baixa (G2) |
-| Fix 5c: `--python-alvo` relativo | `tests/conftest.py:39` `.absolute()` (não `.resolve()`, que seguiria o link do venv) | CI com alvo relativo `"$PASTA/python/python.exe"` (`run2.log:376-377`) → 5 e2e PASSED (`run2.log:393-399`) | ✅ Resolvido |
-| (novo, só no CI) 1º run falhou: `proxy-tools` só tem sdist e o Python embutido ignora `PYTHONPATH` | T14: `setuptools` no lock (`requirements-build-windows.txt`), `bloco_do_lock` + `comandos_instalar` em duas etapas (`construir_portatil.py:98-126`) → WIN-25 | Run 34631686098 `--log-failed` linha 154 `Cannot import 'setuptools.build_meta'`; run 34632113906 `run2.log:298`, `:310-315` (`Successfully built proxy-tools`) | ✅ Resolvido |
+| **G1 (Major)**: checagem tag×commit em todo evento; quebraria PRs e `publicar=false` depois da 1ª Release (WIN-22/24); WIN-23 sem escopo | T15: `PUBLICA: ${{ github.event_name == 'push' \|\| inputs.publicar }}` (`.github/workflows/windows.yml:77-78`); `gh api` e `--sha-tag/--sha` só dentro de `if [ "$PUBLICA" = "true" ]` (`:88-95`); a mesma condição do job `release` (`:125`). Spec: WIN-23 reescrito (`spec.md:73`) | **CI**: `run3.log:168` `PUBLICA: ` (vazio em PR; o contexto `inputs` não existe fora do `workflow_dispatch`); `run3.log:169-170`, depois do `##[endgroup]` vem direto `Release v1.1 -> ...`, **sem** a linha `v1.1` impressa pela 2ª chamada de `release.py tag`, que aparecia na rodada 2 (`run2.log:165`); o passo caiu de 10 s para 1,6 s (sem o `gh api`). **Simulação independente** (corpo real do passo extraído do YAML via `yaml.safe_load`, `bash -e -o pipefail` como no runner, `gh` falso): 9 casos, tabela abaixo. **Docs** do GitHub (Context7): o contexto `inputs` preserva booleanos → `publicar` vira `"true"`/`"false"` | ✅ Resolvido |
+| **G2 (Minor)**: `CLAUDE.md` com a frase "No Windows, só depois do 1º run"; gatilho de PR e "dispatch só após merge" não documentados; `design.md` sem T9-T14 | T16 | `CLAUDE.md:186-188` (OCR verde no Windows, run 34632113906); `CLAUDE.md:147-150` (PR; `workflow_dispatch` só existe com o arquivo na `main`); `CLAUDE.md:151-153` (tag×commit só em execução que publica); `README.md:136-138` (PR; botão só depois da `main`); `README.md:142-143` (teste e PR não checam); `design.md:179-191` (T9-T16) | ✅ Resolvido |
+| **G3 (Cosmetic)**: `__pycache__` de `converter`/`server` no zip | Adiado: `context.md:61` (Deferred Ideas, com a correção descrita: `python -B` no 6/6) | Nenhum AC trata disso (WIN-02 exige a presença de itens, não proíbe extras); o arquivo é inofensivo | ✅ Adiamento aceito (cosmético, registrado, com correção concreta) |
+
+**Simulação do passo da tag** (corpo real de `.github/workflows/windows.yml:79-99`; `GITHUB_SHA=bbbb…`; `server.VERSAO = 1.1`):
+
+| PUBLICA | Ref | `gh api` devolve | Saída | `gh` chamado | Resultado |
+| ------- | --- | ---------------- | ----- | ------------ | --------- |
+| `""` (PR) | branch `1/merge` | tag noutro commit `aaaa…` | 0, `tag=v1.1` | 0× | ✅ PR não é bloqueado (WIN-24) |
+| `""` (PR) | branch `1/merge` | tag inexistente | 0 | 0× | ✅ |
+| `false` | branch `main` | tag noutro commit | 0, `tag=v1.1` | 0× | ✅ `publicar=false` não é bloqueado (WIN-22) |
+| `true` | branch `main` | tag noutro commit | **1**, `ERRO: a tag v1.1 já existe no commit aaaa…, mas este build é do commit bbbb…` | 1× | ✅ WIN-23 (os dois commits) |
+| `true` | branch `main` | mesmo commit | 0 | 1× | ✅ |
+| `true` | branch `main` | inexistente (JSON no stdout, sai 1) | 0 | 1× | ✅ o JSON do erro não vaza para `SHA_TAG` |
+| `true` | tag `v1.1` | mesmo commit | 0 | 1× | ✅ push de tag normal |
+| `true` | tag `v1.1` | outro commit | 1 | 1× | ✅ |
+| `true` | tag `v9.9` | - | 1, `v9.9 (9.9) difere ... 1.1` | 0× | ✅ WIN-19 falha antes da consulta |
 
 ---
 
@@ -38,84 +48,81 @@ Fontes de evidência de CI (repo `Fluix-Solutions/conversor-ficha-financeira`):
 
 | Task | Status | Notes |
 | ---- | ------ | ----- |
-| T1-T8 | ✅ Done | Ver rodada 1; lacunas fechadas pelas T9-T14 |
-| T9 `main` inteiro | ✅ Done | M5/M6 mortos nesta rodada |
-| T10 tag em outro commit | ✅ Done | M9 morto |
-| T11 `publicar` + checagem de tag | ⚠️ Partial | A checagem roda também em PR e em `publicar=false` (G1) |
-| T12 docs sem publicar | ✅ Done | Obs. G2 (docs não citam o gatilho de PR; linha desatualizada) |
-| T13 gatilho de PR | ✅ Done | Run 34632113906 verde, `release` skipped |
-| T14 dependência só em código-fonte | ✅ Done | CI verde; M10/M11/M12 mortos |
+| T1-T14 | ✅ Done | Verificadas nas rodadas 1-2; código inalterado desde a804d83 |
+| T15 checagem só quando publica | ✅ Done | O critério "Gate CI: PR verde" está desmarcado em `tasks.md:477`, mas o run 34633772453 (HEAD 7983506) está verde. Falta só marcar a caixa (o Verifier não edita `tasks.md`) |
+| T16 docs | ✅ Done | O "Where" (`tasks.md:489`) cita só o `CLAUDE.md`; o commit também mexeu no README e no `design.md`, como o próprio "Done when" pede |
+
+Obs.: `tasks.md:12` ainda diz "In Progress (correções da 2ª rodada)". O status precisa ser atualizado pelo orquestrador.
 
 ---
 
 ## Spec-Anchored Acceptance Criteria
 
-Legenda: **CI✔** = executado no run 34632113906/34631686098; **Estrutura** = verificado pelo YAML, execução pendente (só ocorre após merge/tag).
+Legenda: **CI✔** = executado num run do Windows com linha citável; **Estrutura** = verificado pelo YAML (e, quando indicado, por simulação local), com execução pendente pós-merge.
 
 | Criterion | Spec-defined outcome | `file:line` + assertion / linha do workflow / linha do log | Result |
 | --------- | -------------------- | ---------------------------------------------------------- | ------ |
-| WIN-01 dispatch com `publicar` marcado | Build em `windows-latest`; Release `v<server.VERSAO>` no commit escolhido | `.github/workflows/windows.yml:33-38` (`publicar` boolean, `default: true`); `:49` `runs-on: windows-latest`; `:80` `release.py tag` sem `--ref-tag` → `tests/test_release.py:39-40` `tag_release(None, "1.1") == "v1.1"`; `:84-89` tag antiga em outro commit falha antes; `:119` `if: ... \|\| inputs.publicar`; `:149-150` `gh release create "$TAG" ... --target "$GITHUB_SHA"` | ✅ Estrutura (execução pendente: `workflow_dispatch` só existe após o merge) |
-| WIN-02 conteúdo da pasta | Embutido 3.12.9 amd64 + `converter.py`, `server.py`, `app_desktop.py`, `web/`, `Conversor.bat`, `LEIA-ME.txt` | `tests/test_construir.py:35-39` `cp.PY == "3.12.9"` + hash; `:139-141` `(alvo / item).is_file()` para os 6 itens + `python/python.exe`; CI `run2.log:321` `baixando python-3.12.9-embed-amd64.zip`; artefato real: `Conversor.bat`, `LEIA-ME.txt`, `app_desktop.py`, `converter.py`, `server.py`, `web/index.html`, `python/python312.dll` presentes | ✅ PASS (CI✔) |
-| WIN-03 SHA-256 diferente | Falha antes de instalar | `construir_portatil.py:178` antes de `:179-180`; `tests/test_construir.py:29-32` `real in str(e.value)` e `esperado in str(e.value)`; `:164-167` `pytest.raises(RuntimeError)`, nada extraído, `chamou_pip == []`; CI passou o hash (sem erro após `run2.log:321`) | ✅ PASS (M1 morto na rodada 1; código inalterado) |
-| WIN-04 importações | 11 módulos, incluindo `clr`; falha se algum falhar | `tests/test_portatil.py:64` `clr` quando `win32`; `:75` `sorted(out["mods"]) == sorted(esperados)`; `:76` `{...if v != "ok"} == {}`; CI `run2.log:395` `test_importa_tudo PASSED` com o alvo `python.exe` da pasta (`run2.log:376-377`), e `run2.log:319` `tudo importa e o OCR carrega` (passo 6/6, `construir_portatil.py:238-239` inclui `clr`) | ✅ PASS (CI✔) |
-| WIN-05 ficha de texto | Proventos com exatamente os valores por Ano+Mês e rubrica | `tests/test_portatil.py:30-31` cabeçalho exato; `:33` `(2020, m)` para os 12 meses; `:35-39` `ln[2:] == [...]`; CI `run2.log:393` `test_ficha_texto PASSED` | ✅ PASS (CI✔) |
-| WIN-06 ficha escaneada | layout `OCR`, 12 valores por rubrica, sem `CONFERIR` | `tests/test_portatil.py:49` `resumo["layout"] == "OCR"`; `:51` `[... "CONFERIR" in a] == []`; `:57` valores exatos; CI `run2.log:394` `test_ficha_escaneada PASSED` | ✅ PASS (CI✔) |
-| WIN-07 `/api/versao` | `"ocr": true` | `tests/test_portatil.py:106` `dados["ocr"] is True`; CI `run2.log:396` `test_api_versao_informa_ocr PASSED` | ✅ PASS (CI✔) |
-| WIN-08 falha não publica | Nenhum artefato nem Release | Run 34631686098: passo "Monta a pasta e o zip" = failure, "Run actions/upload-artifact@v7" = skipped, job `release` = skipped, artefatos = 0; `--log-failed` linha 169 `CalledProcessError` → linha 170 `exit code 1`; `.github/workflows/windows.yml:55` bash `-e -o pipefail` (`run2.log:152`) | ✅ PASS (CI✔ — o caminho de falha aconteceu de verdade) |
-| WIN-09 só fichas fictícias | Nenhum PDF real no repo nem nos logs | `tests/test_portatil.py:115` `r.stdout.strip() == ""`; CI `run2.log:397` `test_repositorio_sem_pdf_real PASSED`; artefato real: 0 entradas `.pdf` | ✅ PASS (CI✔) |
-| WIN-10 registro no log | Pacotes com versão, tamanho e SHA-256 do zip | `tests/test_construir.py:149` `f"sha256: {sha256(arq_zip)}" in saida`, `:150` pacote na saída; `:83-84`, `:92-93`; CI `run2.log:332-371` (37 pacotes `nome==versão`), `:373` `tamanho do zip: 153.5 MB`, `:374` `sha256: ba718e86…4ff9` = `run2.log:443` digest do upload = digest da API = SHA-256 do artefato baixado | ✅ PASS (CI✔; M6 morto) |
-| WIN-11 Release por tag | Release com a tag + `Conversor-de-Ficha-Financeira-<tag>-windows-x64.zip` | `tests/test_release.py:76` nome exato; `.github/workflows/windows.yml:14-18` filtros de tag; `:79` `--ref-tag "$REF_NAME"`; `:90` nome do zip; nome do artefato = nome do arquivo com `archive: false` (CI `run2.log:445` `Artifact Conversor-de-Ficha-Financeira-v1.1-windows-x64.zip successfully finalized`); `:135` download pelo mesmo nome; `:149` `gh release create "$TAG" "dist/$ZIP"` | ✅ Estrutura (job `release` e push de tag nunca executaram) |
-| WIN-12 pasta raiz única | `Conversor de Ficha Financeira/` com `.bat` e `LEIA-ME.txt` no 1º nível | `tests/test_construir.py:70-72`, `:146-147`; artefato real: raízes = `['Conversor de Ficha Financeira']`, `.../Conversor.bat` e `.../LEIA-ME.txt` presentes | ✅ PASS (CI✔) |
-| WIN-13 notas | SHA-256 + Windows 10/11 64 bits, .NET Framework 4.7.2+, WebView2 Runtime | `tests/test_release.py:82-85`; `:111` SHA-256 real no CLI; `release.py:74-76` traz "WebView2 Runtime"; workflow `:148` | ✅ PASS (obs.: o teste afirma `"WebView2"`, não `"WebView2 Runtime"`) |
-| WIN-14 Release existente | Falhar sem alterar | `.github/workflows/windows.yml:139-144` `gh release view "$TAG"` → `exit 1` antes do `create` (`:146-152`) | ✅ Estrutura (execução pendente) |
-| WIN-15 permissões | `contents: write` só no job de publicação | `.github/workflows/windows.yml:44-45` padrão `read`, `:51-52` build `read`, `:122-123` release `write`; CI `run2.log:21-24` `GITHUB_TOKEN Permissions: Contents: read, Metadata: read` no `build` | ✅ PASS (build CI✔; release declarativo) |
-| WIN-16 lock com hash | Instala do lock com `--require-hashes` | `tests/test_construir.py:128-135` (2 instalações, `--require-hashes` nas duas, `-r cp.LOCK`, nenhum `requirements-desktop.txt`); `tests/test_lock.py:57-62`; CI `run2.log:221-309` cada pacote `from -r ...requirements-windows.lock (line N)`; comando real com `--require-hashes -r ...requirements-windows.lock` em 34631686098 `--log-failed` linha 169 | ✅ PASS (CI✔; M5 morto) |
-| WIN-17 lock cobre requirements | Todo pacote de `requirements-desktop.txt` e `requirements-base.txt` | `tests/test_lock.py:45-51` `faltando == set()` (inclui `requirements-build-windows.txt`) | ✅ PASS |
-| WIN-18 comando único no Mac | Um comando regenera o lock para Windows | `tests/test_lock.py:66-72` (comando do cabeçalho com `requirements-desktop.txt`, `--python-platform x86_64-pc-windows-msvc`, `--python-version 3.12`, `--generate-hashes`, `-o requirements-windows.lock`); rodado nesta rodada no worktree descartável: lock regenerado **idêntico** (`git diff` vazio) | ✅ PASS |
-| WIN-19 tag ≠ VERSAO | Falha antes do build com os dois valores | `tests/test_release.py:29-30`; `:93-94` CLI `returncode == 1`, `"9.9"` e `"1.1"` no stderr; passo da tag é o 1º após setup (`.github/workflows/windows.yml:70-80`), executado no CI (`run2.log:165`) | ✅ PASS |
-| WIN-20 README | Gerar versão pelo Mac, testar sem publicar, atualizar lock | `README.md:115-127` (tag e botão → Release), `:129-134` (testar sem publicar + artefato), `:154-169` (lock) | ✅ PASS (obs. G1: o "testar sem publicar" documentado quebra depois da 1ª Release; G2: o gatilho de PR não é citado) |
-| WIN-21 CLAUDE.md | Fluxo, repo `Fluix-Solutions/...`, `pip --platform`, Python 3.12 | `CLAUDE.md:131-190`; `:135` repo; `:166-170` `pip --platform`; `:171-177` `proxy-tools`; `:178-179` 3.12 | ✅ PASS (obs. G2: `:180-181` desatualizado; PR não citado) |
-| WIN-22 dispatch com `publicar` desmarcado | Build + testes; zip só como artefato por 14 dias; sem tag nem Release | `.github/workflows/windows.yml:119` (job `release` pulado com `inputs.publicar == false`); `:113` `retention-days: 14`. Caminho análogo executado no PR (artefato `expires_at` = criação + 14 dias; `release` skipped). **Mas** `:70-89` roda a checagem de tag sem condição: com a tag `v<VERSAO>` já publicada num commit anterior, o run falha em `release.py:55-59` antes do build | ❌ GAP (G1, latente: aparece após a 1ª Release) |
-| WIN-23 tag existente em outro commit | Falha antes do build mostrando os dois commits | `release.py:55-59`; `tests/test_release.py:43-47` (os dois SHAs na mensagem), `:50-51`, `:54-55`, `:58-72` (CLI sai 1 / 0); `.github/workflows/windows.yml:84-89`; ramo "tag inexistente" executado no CI (`run2.log:165` imprimiu `v1.1`: o JSON de erro do `gh` não vazou para `SHA_TAG`) | ⚠️ Spec-precision gap (G1): o AC não restringe às execuções que publicam e contradiz WIN-22/WIN-24 |
-| WIN-24 PR para a `main` | Build + testes no Windows; zip só como artefato; sem tag nem Release | `.github/workflows/windows.yml:21-32` (`branches: [main]` + `paths`); `:119` falso em PR; run 34632113906 verde, `release` skipped, sem tags/Releases. **Mas** no PR o `$GITHUB_SHA` é o commit de merge (`run2.log:90`, `:117-120`: `5586d6f Merge c32eb9e into aca6229`), que nunca é o commit de uma tag → depois da 1ª Release, todo PR que não suba o `VERSAO` falha no passo da tag | ❌ GAP (G1, latente: hoje verde porque não há tag) |
-| WIN-25 dependência só em código-fonte | Compilar com o `setuptools` do lock, instalado antes com hash, sem `PYTHONPATH` | `construir_portatil.py:98-126`, `:212-213`; `tests/test_construir.py:47-56` (2 comandos, 1º só `setuptools==` com `--hash`, `count("==") == 1`; 2º `--no-build-isolation`); `:128-134` no `main`; `tests/test_lock.py:83-87`; CI `run2.log:216-220` (setuptools 84.0.0 de `_tmp\setuptools.txt`), `:298` (já satisfeito no site-packages da pasta), `:310-315` (`Successfully built proxy-tools`); contraprova: 34631686098 `--log-failed` linha 154 | ✅ PASS (CI✔; M10/M11/M12 mortos) |
+| WIN-01 dispatch com `publicar` marcado | Build em `windows-latest`; Release `v<server.VERSAO>` no commit escolhido | `.github/workflows/windows.yml:35-38` (`publicar` boolean, `default: true`); `:49` `runs-on: windows-latest`; `:82` `release.py tag` sem `--ref-tag` → `tests/test_release.py:40` `tag_release(None, "1.1") == "v1.1"`; `:88-95` checagem de tag (simulação `true`/`main`); `:125` `if: ... \|\| inputs.publicar`; `:155-156` `gh release create "$TAG" ... --target "$GITHUB_SHA"` | ✅ Estrutura (execução pendente: `workflow_dispatch` só existe após o merge) |
+| WIN-02 conteúdo da pasta | Embutido 3.12.9 amd64 + `converter.py`, `server.py`, `app_desktop.py`, `web/`, `Conversor.bat`, `LEIA-ME.txt` | `tests/test_construir.py:36` `cp.PY == "3.12.9"`; `:141` `(alvo / item).is_file()` para os itens; CI `run3.log:325` `baixando python-3.12.9-embed-amd64.zip` | ✅ PASS (CI✔) |
+| WIN-03 SHA-256 diferente | Falha antes de instalar | `tests/test_construir.py:31-32` os dois hashes na mensagem; `:166-167` nada extraído, `chamou_pip == []` | ✅ PASS |
+| WIN-04 importações | 11 módulos, incluindo `clr`; falha se algum falhar | `tests/test_portatil.py:75` `sorted(out["mods"]) == sorted(esperados)`; `:76` `{... if v != "ok"} == {}`; CI `run3.log:399` `test_importa_tudo PASSED`; `run3.log:323` `tudo importa e o OCR carrega` | ✅ PASS (CI✔) |
+| WIN-05 ficha de texto | Proventos com exatamente os valores por Ano+Mês e rubrica | `tests/test_portatil.py:30` cabeçalho exato; `:33` 12 meses de 2020; `:35` `ln[2:] == [...]`; CI `run3.log:397` `test_ficha_texto PASSED` | ✅ PASS (CI✔) |
+| WIN-06 ficha escaneada | layout `OCR`, 12 valores por rubrica, sem `CONFERIR` | `tests/test_portatil.py:49` `resumo["layout"] == "OCR"`; `:51` sem `CONFERIR`; `:57` valores exatos; CI `run3.log:398` `test_ficha_escaneada PASSED` | ✅ PASS (CI✔) |
+| WIN-07 `/api/versao` | `"ocr": true` | `tests/test_portatil.py:106` `dados["ocr"] is True`; CI `run3.log:400` `test_api_versao_informa_ocr PASSED` | ✅ PASS (CI✔) |
+| WIN-08 falha não publica | Nenhum artefato nem Release | Run 34631686098: "Monta a pasta e o zip" falhou, upload e `release` skipped, 0 artefatos (rodada 2); bash `-e -o pipefail` (`run3.log:156`) | ✅ PASS (CI✔) |
+| WIN-09 só fichas fictícias | Nenhum PDF real no repo nem nos logs | `tests/test_portatil.py:115` `r.stdout.strip() == ""`; CI `run3.log:401` `test_repositorio_sem_pdf_real PASSED` | ✅ PASS (CI✔) |
+| WIN-10 registro no log | Pacotes com versão, tamanho e SHA-256 do zip | `tests/test_construir.py:149` `f"sha256: {sha256(arq_zip)}" in saida`, `:150`; CI `run3.log:370` (`setuptools==84.0.0` na lista de pacotes), `:377` `tamanho do zip: 153.5 MB`, `:378` `sha256: 1589bee2…4555` = digest do artefato na API | ✅ PASS (CI✔; M5 também morto nesta rodada) |
+| WIN-11 Release por tag | Release com a tag + `Conversor-de-Ficha-Financeira-<tag>-windows-x64.zip` | `tests/test_release.py:76` nome exato; `.github/workflows/windows.yml:16-18` filtros de tag; `:81` `--ref-tag "$REF_NAME"`; `:96` nome do zip; `:141` download pelo mesmo nome; `:155` `gh release create "$TAG" "dist/$ZIP"`; simulação `true`/tag `v1.1`/mesmo commit → 0 | ✅ Estrutura (push de tag e job `release` nunca executaram) |
+| WIN-12 pasta raiz única | `Conversor de Ficha Financeira/` com `.bat` e `LEIA-ME.txt` no 1º nível | `tests/test_construir.py:70-72`, `:146-147`; artefato real inspecionado na rodada 2 (raiz única) | ✅ PASS |
+| WIN-13 notas | SHA-256 + Windows 10/11 64 bits, .NET Framework 4.7.2+, WebView2 Runtime | `tests/test_release.py:82-85`; `:111` SHA-256 real no CLI; `release.py:74-76` | ✅ PASS (obs.: o teste afirma `"WebView2"`, não `"WebView2 Runtime"`; o texto real traz "WebView2 Runtime") |
+| WIN-14 Release existente | Falhar sem alterar | `.github/workflows/windows.yml:145-150` `gh release view "$TAG"` → `exit 1` antes do `create` (`:152-158`) | ✅ Estrutura (execução pendente) |
+| WIN-15 permissões | `contents: write` só no job de publicação | `.github/workflows/windows.yml:44-45` padrão `read`, `:51-52` build `read`, `:128-129` release `write`; CI `run3.log:22` `Contents: read` no `build` | ✅ PASS (build CI✔; release declarativo) |
+| WIN-16 lock com hash | Instala do lock com `--require-hashes` | `tests/test_construir.py:130` `--require-hashes` nas duas instalações, `:133` `-r cp.LOCK`, `:135` nenhum `requirements-desktop.txt`; CI `run3.log:220` (setuptools de `_tmp\setuptools.txt`), `:302` (lock) | ✅ PASS (CI✔; M5 morto) |
+| WIN-17 lock cobre requirements | Todo pacote de `requirements-desktop.txt` e `requirements-base.txt` | `tests/test_lock.py:51` `faltando == set()` | ✅ PASS |
+| WIN-18 comando único no Mac | Um comando regenera o lock para Windows | `tests/test_lock.py:68-72` (comando do cabeçalho); regenerado idêntico na rodada 2 (lock inalterado desde então) | ✅ PASS |
+| WIN-19 tag ≠ VERSAO | Falha antes do build com os dois valores | `tests/test_release.py:29-30`; `:93-94` CLI `returncode == 1`, `"9.9"` e `"1.1"` no stderr; o passo da tag é o 1º depois do setup (`.github/workflows/windows.yml:70-82`, fora do `if PUBLICA`); simulação `v9.9` → 1 sem chamar o `gh` | ✅ PASS |
+| WIN-20 README | Gerar versão pelo Mac, testar sem publicar, atualizar lock | `README.md:115-127` (tag e botão → Release), `:129-134` (testar sem publicar), `:136-138` (PR; botão só após a `main`), `:140-143` (tag×commit só ao publicar), `:160+` (lock) | ✅ PASS |
+| WIN-21 CLAUDE.md | Fluxo, repo `Fluix-Solutions/...`, `pip --platform`, Python 3.12 | `CLAUDE.md:131-195`; `:135` repo; `:172-176` `pip --platform`; `:184-185` 3.12; `:186-188` OCR verde no Windows | ✅ PASS |
+| WIN-22 dispatch com `publicar` desmarcado | Build + testes; zip só como artefato por 14 dias; sem tag nem Release | `.github/workflows/windows.yml:78` + `:88` (com `publicar=false`, `PUBLICA="false"` → sem checagem); `:125` (`release` pulado); `:119` `retention-days: 14`. Simulação `false`/tag noutro commit → 0, `gh` 0×. O mesmo job `build` rodou no PR (run 34633772453: artefato com `expires_at` = +14 dias, `release` skipped, 0 tags) | ✅ Estrutura + simulação (execução pendente: `workflow_dispatch` só após o merge). O G1 foi fechado |
+| WIN-23 tag existente em outro commit | Em execução que publica: falha antes do build com os dois commits. Em PR ou `publicar=false`: **não** checa | Lógica: `release.py:55-59`; `tests/test_release.py:46-47` (os dois SHAs), `:64-65` (CLI sai 1, os dois SHAs no stderr), `:71-72` (tag inexistente aceita); M9 morto de novo. Escopo: `.github/workflows/windows.yml:78`, `:88-95`. "Não checa" em PR: **CI✔** `run3.log:168` + ausência da linha `v1.1` em `run3.log:169-170` (compare `run2.log:165`). "Checa" ao publicar: simulação `true` → 1 com `aaaa…` e `bbbb…` | ✅ PASS no escopo de teste (CI✔) + lógica (teste); ramo que publica: Estrutura + simulação, execução pendente |
+| WIN-24 PR para a `main` | Build + testes no Windows; zip só como artefato; sem tag nem Release | `.github/workflows/windows.yml:21-32` (`branches: [main]` + `paths`); `:125` falso em PR; **run 34633772453** verde em HEAD 7983506: `release` skipped, artefato de 14 dias, 0 tags/Releases; `run3.log:168` sem checagem de tag. Falha latente do G1 (PR depois da 1ª Release): simulação `""`/tag noutro commit → 0, `gh` 0× | ✅ PASS (CI✔ + simulação) |
+| WIN-25 dependência só em código-fonte | Compilar com o `setuptools` do lock, instalado antes com hash, sem `PYTHONPATH` | `tests/test_construir.py:47-56`, `:129-134`; `tests/test_lock.py:86-87`; CI `run3.log:220-224` (setuptools 84.0.0 instalado primeiro), `:302`, `:317-319` (`Successfully built proxy-tools`) | ✅ PASS (CI✔) |
 
-**Status**: ❌ Gaps presentes: 19 ACs com evidência de teste ou de execução no CI; 3 só por estrutura (WIN-01, WIN-11, WIN-14 — execução pendente, sem erro de lógica encontrado); 2 com gap (WIN-22, WIN-24) e 1 spec-precision gap (WIN-23), todos com a mesma causa (G1).
+**Status**: ✅ Todos os ACs têm evidência. 20 estão Verified (teste ou CI); 5 estão com execução pendente por desenho (WIN-01, WIN-11, WIN-14, WIN-22 e o ramo "publica" do WIN-23), com lógica verificada por estrutura e simulação; 0 spec-precision gaps (o WIN-23 agora diz a que execuções se aplica).
 
 ---
 
 ## Edge Cases
 
-- [x] python.org / bootstrap.pypa.io / PyPI fora do ar → falha com a URL/pacote: `construir_portatil.py:83` imprime o arquivo baixado; pip com `check=True` (`:207-208`, `:213`). A falha real do run 34631686098 mostra o nome do pacote (`--log-failed` linha 70 `proxy-tools==0.1.0`) e derrubou o build sem artefato.
-- [x] Tag fora de `vX.Y`/`vX.Y.Z` não roda: `.github/workflows/windows.yml:14-18` (só `tags` no `push` → push de branch não dispara; a doc do GitHub confirma que o tipo de ref sem filtro não dispara); defesa extra em `release.py:40-42` + `tests/test_release.py:33-36`.
-- [x] Duas tags ao mesmo tempo: `.github/workflows/windows.yml:40-42` (grupo por `github.ref`, sem cancelar). Estrutura. Obs.: a doc do GitHub diz que um push com **mais de 3 tags** não gera evento — fora do caso "duas tags".
-- [x] Escaneada com `CONFERIR` → falha: `tests/test_portatil.py:51`; CI `run2.log:394`.
+- [x] python.org / bootstrap.pypa.io / PyPI fora do ar → falha com a URL ou o pacote: `construir_portatil.py:83` imprime o que baixa; o pip roda com `check=True` (`:207-208`, `:213`); na falha real do run 34631686098 aparecia o nome do pacote e o build caiu sem artefato (rodada 2).
+- [x] Tag fora de `vX.Y`/`vX.Y.Z` não roda: `.github/workflows/windows.yml:15-18` (o `push` só tem `tags`, então push de branch não dispara); defesa extra em `release.py:40-42` + `tests/test_release.py:33-36`.
+- [x] Duas tags ao mesmo tempo: `.github/workflows/windows.yml:40-42` (grupo por `github.ref`, sem cancelar). Verificado pela estrutura. Obs.: a doc do GitHub diz que um push com **mais de 3 tags** não gera evento, o que está fora do caso "duas tags".
+- [x] Escaneada com `CONFERIR` → falha: `tests/test_portatil.py:51`; CI `run3.log:398`.
 
 ---
 
 ## Discrimination Sensor
 
-Rodado num `git worktree add --detach scratchpad/wt2 HEAD`, com o `.venv/bin/python` do repo (caminho absoluto), `PYTHONDONTWRITEBYTECODE=1` e `-p no:cacheprovider`. Cada mutação foi aplicada, testada com o gate rápido (`-m "not e2e"`) e desfeita. Linha de base no worktree: 31 passed, 5 deselected. `git status --porcelain` da árvore real **idêntico** antes e depois (só os 4 diretórios não rastreados de sempre); worktree removido (`git worktree list` só com a árvore real).
+Rodado num `git worktree add --detach scratchpad/wt3 HEAD`, com o `.venv/bin/python` do repo por caminho absoluto, `PYTHONDONTWRITEBYTECODE=1` e `-p no:cacheprovider`. A linha de base no worktree deu 31 passed, 5 deselected; `actionlint` ok; o simulador bateu com a tabela acima. Cada mutação foi aplicada, testada com o gate rápido + `actionlint` + o simulador (este só para o YAML) e desfeita com `git checkout -- .` dentro do worktree. Depois o worktree foi removido (`git worktree list` mostra só a árvore real) e o `git status --porcelain` da árvore real ficou **idêntico** antes e depois (só os 4 diretórios não rastreados de sempre).
 
 | Mutation | File:line | Description | Killed? |
 | -------- | --------- | ----------- | ------- |
-| M5 (repetida) | `construir_portatil.py:212-213` | `main` volta a `pip install -r requirements-desktop.txt`, sem lock nem hash | ✅ Killed (`test_main_monta_instala_do_lock_e_registra_o_zip`) |
-| M6 (repetida) | `construir_portatil.py:267` | `main --zip` não chama `registrar` | ✅ Killed (`test_main_monta_instala_do_lock_e_registra_o_zip`) |
-| M9 | `release.py:55` | `sha_da_tag != sha_atual` → `==` | ✅ Killed (3 testes: outro commit, mesmo commit, CLI) |
-| M10 | `construir_portatil.py:126` | 2ª instalação sem `--no-build-isolation` | ✅ Killed (2 testes) |
-| M11 | `construir_portatil.py:125-126` | sem a pré-instalação do `setuptools` (só o lock) | ✅ Killed (2 testes) |
-| M12 | `construir_portatil.py:104-105` | `bloco_do_lock` não para no próximo pacote (devolve setuptools + tudo o que vem depois) | ✅ Killed (`test_instala_do_lock_exigindo_hashes_em_duas_etapas`, `count("==") == 1`) |
+| M13 | `.github/workflows/windows.yml:88` | Guarda invertida: `[ "$PUBLICA" = "true" ]` → `!=` | ⚠️ Sobreviveu à suíte e ao `actionlint` (esperado: matriz "none (lint)"). **Morto pelo simulador**: PR e `publicar=false` com a tag noutro commit passam a sair com 1, e o `true` passa a sair com 0 |
+| M14 | `.github/workflows/windows.yml:78` | Linha `PUBLICA:` removida do `env` (a variável fica vazia, a checagem nunca roda e o WIN-23 some em silêncio) | ⚠️ Sobreviveu à suíte, ao `actionlint` e ao simulador (que injeta `PUBLICA` ele mesmo). Só pega quem lê o YAML |
+| M15 | `.github/workflows/windows.yml:78` | `PUBLICA` só com `github.event_name == 'push'` (ignora `inputs.publicar`; o disparo manual que publica deixa de checar) | ⚠️ Sobreviveu à suíte e ao `actionlint`; o simulador não avalia expressões do GitHub |
+| M9 (regressão) | `release.py:55` | `sha_da_tag != sha_atual` → `==` | ✅ Killed (3 testes: outro commit, mesmo commit, CLI) |
+| M5 (regressão) | `construir_portatil.py:212-213` | `main` volta a `pip install -r requirements-desktop.txt`, sem lock nem hash | ✅ Killed (`test_main_monta_instala_do_lock_e_registra_o_zip`) |
 
-**Sensor depth**: lightweight (6 mutações, focadas nos sobreviventes da rodada 1 e no código novo)
-**Resultado do sensor**: 6/6 mortos, sem sobreviventes
+**Sensor depth**: lightweight (5 mutações: 3 no código novo da rodada 3 e 2 de regressão)
+**Resultado do sensor**: 2/2 mortos no código Python coberto pela matriz; 3/3 mutantes de YAML sobreviveram à suíte, como a matriz (`tasks.md:26`, workflow = "none (lint)") prevê. Isso vira **limitação conhecida**, não gap de teste.
 
-Não mutado: `tests/conftest.py:39` (`.absolute()`, harness de teste; a execução no CI com alvo relativo já o prova) e o YAML do workflow (sem teste executável; julgado por leitura + `actionlint`).
+Avaliação da matriz: ela foi escrita quando o workflow era declarativo. Com T11/T15, o passo da tag ganhou lógica de shell com ramos (`PUBLICA`, o código de saída do `gh`) que decide WIN-22/23/24, e o ramo "publica" só executa depois do merge. Não considero a matriz errada a ponto de bloquear. A lógica foi provada por leitura, pela execução no CI (ramo de PR) e pela simulação do corpo real do passo. Mas uma regressão futura nesse `if` passaria pelo gate sem aviso. Recomendação (Minor, fora desta feature, ver Fix R1).
 
 ---
 
 ## Interactive UAT Results
 
-Não realizado (infra de build). O UAT do Smart App Control com o zip **baixado** segue previsto nas Success Criteria da spec, antes de divulgar a 1ª Release.
+Não realizado (infra de build, sem interação de UI nesta feature). O UAT do Smart App Control com o zip **baixado da Release** continua previsto nas Success Criteria da spec (`spec.md:193`), antes de divulgar a 1ª Release.
 
 ---
 
@@ -123,53 +130,49 @@ Não realizado (infra de build). O UAT do Smart App Control com o zip **baixado*
 
 | Principle | Status |
 | --------- | ------ |
-| Minimum code | ✅ `bloco_do_lock`/`comandos_instalar` curtos; `conferir_commit_da_tag` é uma condição |
-| Surgical changes | ✅ `git diff main..HEAD -- converter.py server.py app_desktop.py web/ Dockerfile requirements.txt requirements-desktop.txt requirements-base.txt` = vazio. Lock: só o cabeçalho e o bloco `setuptools` mudaram desde a rodada 1 (versões mantidas) |
+| Minimum code | ✅ A correção do G1 é uma variável de ambiente e um `if` em volta de 2 comandos (`.github/workflows/windows.yml:77-78`, `:88-95`), reaproveitando a condição do job `release` |
+| Surgical changes | ✅ A rodada 3 só tocou o workflow, a documentação e as specs. `converter.py`, `server.py`, `app_desktop.py`, `web/`, `Dockerfile` e `requirements.txt` continuam sem diferença contra a `main` |
 | No scope creep | ✅ |
-| Matches patterns | ✅ Português, comentários com o porquê, só stdlib em `release.py` |
-| Spec-anchored outcome check | ✅ asserções miram o valor da spec (os dois SHAs na mensagem, nome exato do zip, `--require-hashes` + `--no-build-isolation` no comando executado, SHA-256 real do zip na saída) |
-| Per-layer Coverage Expectation | ✅ funções e orquestração do build cobertas (M5/M6/M10-M12 mortos); workflow por `actionlint` + CI |
-| Every test maps to a spec requirement | ✅ os 36 mapeiam para AC ou Done-when (T9-T14 incluídos) |
-| Documented guidelines followed: `CLAUDE.md` ("Como validar uma conversão": soma dos 12 meses × Total) | ✅ refletido no `CONFERIR` do WIN-06 |
+| Matches patterns | ✅ Comentário com o porquê (`:84-85`: "num PR o commit é o de merge…"), português, mesmo estilo dos passos existentes |
+| Spec-anchored outcome check | ✅ As asserções miram os valores da spec (os dois SHAs na mensagem, nome exato do zip, `--require-hashes`/`--no-build-isolation` no comando executado, SHA-256 real) |
+| Per-layer Coverage Expectation | ✅ Funções e orquestração do build e regras de Release cobertas (M5/M9 mortos); workflow por `actionlint` + CI, conforme a matriz. ⚠️ Limitação conhecida: a lógica de shell do passo da tag não tem teste automatizado (M13-M15) |
+| Every test maps to a spec requirement | ✅ Os 36 testes mapeiam para AC ou Done-when (sem teste novo nesta rodada) |
+| Documented guidelines followed: `CLAUDE.md` ("Como validar uma conversão": soma dos 12 meses × Total) | ✅ Refletido no `CONFERIR` do WIN-06 |
 
-Observações de qualidade (não bloqueiam):
-- `design.md` não foi atualizado com `publicar`, gatilho de PR, checagem de tag nem a instalação em duas etapas (T9-T14) — deriva de documentação de design.
-- O zip leva `__pycache__/converter.cpython-312.pyc` e `server.cpython-312.pyc` (visto no artefato real): o passo 6/6 importa `converter`/`server` **depois** do "5/6 enxugando". Inofensivo.
-- `.github/workflows/windows.yml:84-88`: qualquer erro do `gh api` (rede, limite de taxa), não só "tag inexistente", vira `SHA_TAG=""` e desliga a checagem. Risco baixo.
+Observações (não bloqueiam):
+- **O1** `README.md:140-141`: o exemplo "(por exemplo, um build anterior que falhou)" é pouco provável, porque um build com falha nunca chega ao job `release`, que é o único que cria a tag. O caso real é uma tag criada à mão em outro commit ou uma Release anterior do mesmo `VERSAO`. Cosmético.
+- **O2** (ainda aberta desde a rodada 2) `.github/workflows/windows.yml:89-93`: qualquer erro do `gh api` (rede, limite de taxa) vira `SHA_TAG=""` e desliga a checagem. Agora isso só acontece em execução que publica, e o WIN-14 continua impedindo a sobrescrita de uma Release existente. Risco baixo.
+- **O3** Push de tag **anotada**: pela doc do GitHub, o `GITHUB_SHA` do push é o "tip commit" e o `gh api .../commits/<tag>` devolve o commit (desreferenciado), então os dois batem. O README ensina tag leve (`README.md:123` `git tag v1.2`). Confirmar no 1º push de tag.
+- **O4** Bookkeeping: `tasks.md:477` (caixa "Gate CI: PR verde" da T15) e `tasks.md:12` (Status "In Progress") estão desatualizados em relação ao run 34633772453.
 
 ---
 
 ## Gate Check
 
 - **Gate command**: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
-- **Resultado do gate**: 36 passed, 0 failed, 0 skipped (6,9 s, e2e incluídos); `py_compile` exit 0; `actionlint` exit 0
-- **Test count before feature**: 0 (o repo não tinha testes); rodada 1: 30
+- **Resultado do gate**: 36 passed, 0 failed, 0 skipped (8,4 s, e2e incluídos); `py_compile` exit 0; `actionlint` exit 0
+- **Test count before feature**: 0 (o repo não tinha testes); rodada 1: 30; rodada 2: 36
 - **Test count after feature**: 36
-- **Delta**: +36 (+6 desde a rodada 1: `main` inteiro, 4 de tag×commit, setuptools no lock); nenhum teste removido; `test_instala_do_lock...` ficou mais estrito (2 comandos)
+- **Delta**: +36 (nenhum teste novo nem removido na rodada 3; a rodada só mexeu em YAML e docs)
 - **Skipped tests**: nenhum
 - **Failures**: nenhuma
-- **CI Windows** (run 34632113906): `31 passed, 5 deselected` com o Python do host (`run2.log:198`) e `5 passed, 31 deselected` com o Python da pasta, `platform win32` (`run2.log:388`, `:399`)
+- **CI Windows** (run 34633772453, HEAD 7983506): `31 passed, 5 deselected` com o Python do host (`run3.log:202`) e `5 passed, 31 deselected` com o `python.exe` da pasta (`run3.log:397-403`)
 
 ---
 
 ## Fix Plans
 
-### Fix G1 (Major): a checagem de tag×commit bloqueia as execuções que só testam (WIN-22, WIN-24; spec-precision em WIN-23)
+Nenhum bloqueante. Recomendações opcionais:
 
-- **Root cause**: o passo "Tag da Release" (`.github/workflows/windows.yml:70-93`) roda em todo evento e sempre passa `--sha-tag`/`--sha "$GITHUB_SHA"` (`:84-89`). Em PR o `$GITHUB_SHA` é o commit de merge (`run2.log:117-120`), nunca o da tag; num "Run workflow" de teste ele é a ponta da branch. Cenário real: publica-se a `v1.1` (tag no commit X). O próximo PR que corrige o `converter.py` sem subir o `VERSAO` → `release.py:55-59` "a tag v1.1 já existe no commit X…" → build nunca roda, PR vermelho. O mesmo vale para `gh workflow run -f publicar=false` num commit novo — exatamente o "testar sem publicar" do `README.md:129-134`. A spec permite as duas leituras: WIN-23 não diz a que execuções se aplica, e o motivo dela (a Release presa ao commit antigo) só existe quando se publica.
-- **Fix task**: (1) na spec, restringir WIN-23: "IF, numa execução que publica (tag enviada ou `publicar` marcado), a tag…"; (2) no workflow, consultar e comparar a tag só quando publica — p.ex. `env: PUBLICA: ${{ github.event_name == 'push' || inputs.publicar }}` no passo e `if [ "$PUBLICA" = "true" ]; then ...gh api... ; python release.py tag ... --sha-tag "$SHA_TAG" --sha "$GITHUB_SHA"; fi`; (3) uma linha no README/CLAUDE.md: PR e `publicar=false` não conferem a tag. Alternativa (decisão do usuário): manter como está e documentar que **todo PR que mexe no app precisa subir o `VERSAO`** — nesse caso, reescrever WIN-22/WIN-24 para dizer isso.
-- **Verify**: `actionlint`; revisão da condição; CI do PR continua verde. Opcional, para provar o ramo: criar uma tag descartável `v<VERSAO>` num commit antigo **só se o usuário autorizar** (repo público), rodar o PR e apagar a tag.
-- **Priority**: Major (latente hoje; aparece na 1ª Release e trava o gate de PR)
+### Fix R1 (Minor, fora desta feature): teste da lógica do passo da tag
 
-### Fix G2 (Minor, documentação)
+- **Root cause**: o `if` do `PUBLICA` e o tratamento do código de saída do `gh` são lógica com ramos, e hoje só o `actionlint` os cobre (M13-M15 sobrevivem).
+- **Fix task**: um teste em `tests/` que (a) carrega `.github/workflows/windows.yml` e afirma que a expressão `PUBLICA` do passo `tag` é igual ao `if` do job `release` (mata M14/M15); (b) extrai o `run` do passo e o executa em bash com `gh`/`python` falsos para `PUBLICA ∈ {"", "false", "true"}` × tag noutro commit, afirmando saída 0/0/1 e os dois SHAs no stderr (mata M13). O runner Windows tem bash (Git Bash). Alternativa: mover o corpo do passo para `release.py` e testar em Python.
+- **Priority**: Minor
 
-- `CLAUDE.md:180-181` ("No Windows, só depois do 1º run do workflow") → o run 34632113906 já passou OCR/texto no Windows com opencv 5.0.0.93 + numpy 2.5.3.
-- README e CLAUDE.md não citam o gatilho de **PR** (WIN-24), e o "Run workflow"/`gh workflow run` do `README.md:129-130` só existe depois que o workflow está na `main` (o próprio YAML diz isso em `.github/workflows/windows.yml:19-20`).
-- `design.md`: registrar T9-T14 (opcional).
+### Fix R2 (Cosmetic): `README.md:140-141`, trocar o exemplo por "uma tag criada à mão em outro commit".
 
-### Fix G3 (Cosmetic, opcional)
-
-- Tirar os `__pycache__` do `converter`/`server` gerados pelo passo 6/6 antes do `zipar` (`construir_portatil.py:226-229` roda antes de `:256`).
+### Fix R3 (bookkeeping): marcar `tasks.md:477` e atualizar `tasks.md:12`.
 
 ---
 
@@ -177,44 +180,49 @@ Observações de qualidade (não bloqueiam):
 
 | Requirement | Previous Status | New Status |
 | ----------- | --------------- | ---------- |
-| WIN-01 | Implementing | Implementing (estrutura verificada; execução pendente — só ocorre após o merge) |
-| WIN-02 | Implementing | ✅ Verified (teste do `main` + CI + artefato real) |
+| WIN-01 | Implementing | Implementing (estrutura verificada; execução pendente pós-merge) |
+| WIN-02 | Verified | ✅ Verified |
 | WIN-03 | Verified | ✅ Verified |
-| WIN-04 | Verified | ✅ Verified (agora com o Python da pasta no Windows) |
-| WIN-05 | Verified | ✅ Verified (CI✔) |
-| WIN-06 | Verified | ✅ Verified (CI✔) |
-| WIN-07 | Verified | ✅ Verified (CI✔) |
-| WIN-08 | Implementing | ✅ Verified (run 34631686098: falhou, 0 artefatos, `release` skipped) |
+| WIN-04 | Verified | ✅ Verified |
+| WIN-05 | Verified | ✅ Verified |
+| WIN-06 | Verified | ✅ Verified |
+| WIN-07 | Verified | ✅ Verified |
+| WIN-08 | Verified | ✅ Verified |
 | WIN-09 | Verified | ✅ Verified |
-| WIN-10 | Implementing | ✅ Verified (M6 morto + log do CI) |
-| WIN-11 | Implementing | Implementing (estrutura verificada; execução pendente — só ocorre com a 1ª tag) |
-| WIN-12 | Verified | ✅ Verified (+ artefato real) |
+| WIN-10 | Verified | ✅ Verified |
+| WIN-11 | Implementing | Implementing (estrutura verificada; execução pendente: 1ª tag) |
+| WIN-12 | Verified | ✅ Verified |
 | WIN-13 | Verified | ✅ Verified |
 | WIN-14 | Implementing | Implementing (estrutura verificada; execução pendente) |
-| WIN-15 | Implementing | ✅ Verified (build: log de permissões; release: declarativo) |
-| WIN-16 | Implementing | ✅ Verified (M5 morto + log do CI) |
+| WIN-15 | Verified | ✅ Verified |
+| WIN-16 | Verified | ✅ Verified |
 | WIN-17 | Verified | ✅ Verified |
-| WIN-18 | Verified | ✅ Verified (regenerado idêntico nesta rodada) |
+| WIN-18 | Verified | ✅ Verified |
 | WIN-19 | Verified | ✅ Verified |
-| WIN-20 | Implementing | ✅ Verified |
+| WIN-20 | Verified | ✅ Verified |
 | WIN-21 | Verified | ✅ Verified |
-| WIN-22 | Implementing | ❌ Needs Fix (G1) |
-| WIN-23 | Implementing | ❌ Needs Fix (G1 — spec-precision: escopo) |
-| WIN-24 | Implementing | ❌ Needs Fix (G1) |
-| WIN-25 | Implementing | ✅ Verified (CI✔ + M10/M11/M12 mortos) |
+| WIN-22 | Needs Fix | Implementing (G1 fechado; estrutura + simulação; execução pendente: dispatch após o merge) |
+| WIN-23 | Needs Fix | Implementing (lógica Verified por teste + escopo de teste CI✔; ramo que publica: estrutura + simulação, execução pendente) |
+| WIN-24 | Needs Fix | ✅ Verified (run 34633772453 + simulação do cenário pós-1ª Release) |
+| WIN-25 | Verified | ✅ Verified |
 
 ---
 
 ## Summary
 
-**Overall**: ❌ Not Ready (1 correção Major pequena, 1 decisão do usuário)
+**Overall**: ✅ Ready para o merge. Cinco ACs dependem de conferência pós-merge, que só pode acontecer depois dele.
 
-**Spec-anchored check**: 19/25 ACs com asserção ou execução no CI que bate com a spec; 3 só por estrutura (WIN-01, WIN-11, WIN-14; execução pendente, lógica sem defeito); 2 gaps (WIN-22, WIN-24) + 1 spec-precision gap (WIN-23), mesma causa
-**Sensor**: 6/6 mutações mortas (M5 e M6 da rodada 1 agora morrem)
-**Gate**: 36 passed, 0 failed; `py_compile` e `actionlint` ok; CI Windows verde (run 34632113906)
+**Spec-anchored check**: 25/25 ACs com evidência que bate com a spec (20 Verified por teste ou CI; 5 por estrutura + simulação, com execução pendente por desenho); 0 spec-precision gaps
+**Sensor**: 2/2 mutações no código Python mortas; 3 mutações no YAML sobreviveram à suíte (limitação conhecida da matriz; M13 morto pelo simulador independente)
+**Gate**: 36 passed, 0 failed; `py_compile` e `actionlint` ok; CI Windows verde em HEAD (run 34633772453)
 
-**What works**: build no Windows real com o Python da pasta (imports com `clr`, OCR, ficha de texto e escaneada com valores exatos, `/api/versao`), lock com hash instalado em duas etapas (o `proxy-tools` compila), zip com raiz única e SHA-256 registrado e igual ao digest do artefato, "nada publica se falhar" provado por um run que falhou de verdade, PR que não publica, regras de tag/versão/commit com testes que discriminam.
+**What works**: build no Windows real com o Python da pasta (imports com `clr`, OCR, ficha de texto e escaneada com valores exatos, `/api/versao`), lock com hash em duas etapas, zip com raiz única e SHA-256 igual ao digest do artefato, "nada publica se falhar" (provado por uma falha real), PR que só testa e não é bloqueado por tag antiga (G1 fechado), regras de tag, versão e commit com testes que discriminam, documentação coerente com o comportamento.
 
-**Issues found**: G1 (a checagem de tag×commit precisa valer só para execuções que publicam — ou o usuário aceita que todo PR suba o `VERSAO`), G2 (docs), G3 (cosmético).
+**Issues found**: nenhum bloqueante. R1 (teste da lógica de shell do workflow, Minor), R2 (exemplo do README, cosmético), R3 (caixas do `tasks.md`).
 
-**Next steps**: decidir G1 com o usuário e aplicar (condição no passo da tag + texto do WIN-23); corrigir G2; rodada 3 de verificação. Depois do merge: `gh workflow run windows.yml -f publicar=false` (WIN-22) e a 1ª tag (WIN-01/11/14) fecham os ACs pendentes de execução.
+**Next steps (pós-merge, para o usuário)**:
+1. `gh workflow run windows.yml -f publicar=false` na `main` → build verde, artefato de 14 dias, **nenhuma** tag nem Release (fecha WIN-22 e o "não checa" do WIN-23 no dispatch).
+2. Testar o zip do artefato numa máquina com Smart App Control ligado (UAT, `spec.md:193`).
+3. Publicar a 1ª versão (`git tag v1.1 && git push origin v1.1`, ou "Run workflow" com `publicar` marcado) → Release `v1.1` com `Conversor-de-Ficha-Financeira-v1.1-windows-x64.zip` e SHA-256 nas notas (fecha WIN-01/WIN-11 e o ramo "publica" do WIN-23; confirma O3 se a tag for anotada).
+4. Reenviar o workflow para a mesma `v1.1` → falha em "Release não pode existir" sem alterar a Release (fecha WIN-14).
+5. Abrir um PR qualquer que mexa no app **depois** da `v1.1` → build verde sem subir o `VERSAO` (prova de ponta a ponta do G1).

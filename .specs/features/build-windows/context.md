@@ -59,3 +59,4 @@ Gerar, a partir do Mac, a pasta portátil Windows do conversor num runner Window
 - Instalador assinado (ex.: Azure Trusted Signing).
 - Migrar para o pacote `rapidocr` novo e Python 3.13+.
 - Zip sem `__pycache__` de `converter`/`server` (o autoteste 6/6 importa depois da limpeza; rodar com `python -B`). Cosmético — gap G3 da 2ª verificação.
+- Teste automatizado do passo da tag do workflow (expressão `PUBLICA` = `if` do job `release`; corpo do passo com `gh` falso), ou levar essa lógica para `release.py`. Lacuna R1 da 3ª verificação.

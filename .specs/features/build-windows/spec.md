@@ -157,7 +157,7 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| WIN-01 | P1: Build verificado | T7 | Implementing |
+| WIN-01 | P1: Build verificado | T7 | Implementing (estrutura verificada; execução pendente pós-merge) |
 | WIN-02 | P1: Build verificado | T7, T9 | Verified |
 | WIN-03 | P1: Build verificado | T3 | Verified |
 | WIN-04 | P1: Build verificado | T6 | Verified |
@@ -167,23 +167,25 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | WIN-08 | P1: Build verificado | T7 | Verified |
 | WIN-09 | P1: Build verificado | T5, T6 | Verified |
 | WIN-10 | P1: Build verificado | T4, T7, T9 | Verified |
-| WIN-11 | P1: Publicação por tag | T2, T7 | Implementing |
+| WIN-11 | P1: Publicação por tag | T2, T7 | Implementing (estrutura verificada; execução pendente: 1ª tag) |
 | WIN-12 | P1: Publicação por tag | T4 | Verified |
 | WIN-13 | P1: Publicação por tag | T2 | Verified |
-| WIN-14 | P1: Publicação por tag | T7 | Implementing |
+| WIN-14 | P1: Publicação por tag | T7 | Implementing (estrutura verificada; execução pendente pós-merge) |
 | WIN-15 | P1: Publicação por tag | T7 | Verified |
 | WIN-16 | P1: Dependências travadas | T1, T3, T9 | Verified |
 | WIN-17 | P1: Dependências travadas | T1 | Verified |
 | WIN-18 | P1: Dependências travadas | T1 | Verified |
 | WIN-19 | P2: Versão e docs | T2 | Verified |
-| WIN-20 | P2: Versão e docs | T8, T12 | Verified |
-| WIN-21 | P2: Versão e docs | T8 | Verified |
-| WIN-22 | P1: Build verificado | T11 | Needs Fix |
-| WIN-23 | P1: Build verificado | T10, T11 | Needs Fix |
-| WIN-24 | P1: Build verificado | T13 | Needs Fix |
+| WIN-20 | P2: Versão e docs | T8, T12, T16 | Verified |
+| WIN-21 | P2: Versão e docs | T8, T16 | Verified |
+| WIN-22 | P1: Build verificado | T11, T15 | Implementing (G1 fechado; estrutura + simulação; execução pendente pós-merge) |
+| WIN-23 | P1: Build verificado | T10, T11, T15 | Implementing (lógica e escopo de teste verificados; ramo que publica pendente pós-merge) |
+| WIN-24 | P1: Build verificado | T13, T15 | Verified |
 | WIN-25 | P1: Dependências travadas | T14 | Verified |
 
 **Coverage:** 25 total, 25 mapped to tasks, 0 unmapped
+
+**Regra de status (Verifier, rodada 3):** `Verified` = asserção de teste que mira o valor da spec (morta quando mutada) ou execução real no CI Windows com linha de log citável; evidência só estática vale para ACs declarativos. Caminho de runtime que ainda não executou (só roda após o merge/tag) fica `Implementing` com a nota de pendência — ver `validation.md`.
 
 ---
 
