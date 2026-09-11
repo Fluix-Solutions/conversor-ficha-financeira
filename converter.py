@@ -570,19 +570,32 @@ def _hashes_glifos(caminho, pageno: int) -> dict:
 # da decifragem; o OCR não toca em número nenhum.
 # ----------------------------------------------------------------------------
 _OCR_ENGINE = None
+_OCR_ERRO = None  # por que o OCR não carregou (para conferir o deploy)
 _OCR_CACHE: dict[tuple[str, int], list] = {}
 
 
 def _ocr_engine():
-    global _OCR_ENGINE
+    global _OCR_ENGINE, _OCR_ERRO
     if _OCR_ENGINE is None:
         try:
             from rapidocr_onnxruntime import RapidOCR
-        except ImportError:
-            _OCR_ENGINE = False
+        except Exception as e:  # noqa: BLE001 - inclui falta de lib do sistema
+            _OCR_ENGINE, _OCR_ERRO = False, f"{type(e).__name__}: {e}"
         else:
-            _OCR_ENGINE = RapidOCR()
+            # Montar o motor também pode falhar (modelo ausente, lib do
+            # sistema faltando). Sem esse try o erro virava "erro inesperado".
+            try:
+                _OCR_ENGINE = RapidOCR()
+            except Exception as e:  # noqa: BLE001
+                _OCR_ENGINE, _OCR_ERRO = False, f"{type(e).__name__}: {e}"
     return _OCR_ENGINE or None
+
+
+def ocr_status() -> dict:
+    """Se o leitor de imagens (OCR) está disponível e, quando não, por quê.
+    Serve para conferir um deploy: sem OCR, ficha escaneada é recusada."""
+    ok = _ocr_engine() is not None
+    return {"ocr": ok, "ocr_erro": None if ok else (_OCR_ERRO or "indisponível")}
 
 
 def _ocr_pagina(caminho, page_idx: int) -> list[tuple[float, float, float, str]]:

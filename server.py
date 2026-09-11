@@ -34,7 +34,7 @@ from pathlib import Path
 
 from flask import Flask, Response, jsonify, request, send_file, send_from_directory
 
-from converter import ORIGENS, ConversaoError, converter
+from converter import ORIGENS, ConversaoError, converter, ocr_status
 
 VERSAO = "1.1"
 MAX_MB = 25
@@ -168,7 +168,9 @@ def api_origens():
 
 @app.get("/api/versao")
 def api_versao():
-    return jsonify({"versao": VERSAO})
+    # `ocr` diz se o servidor consegue ler ficha escaneada. Sem ele o
+    # deploy parece saudável e só quebra quando alguém manda um scan.
+    return jsonify({"versao": VERSAO, **ocr_status()})
 
 
 @app.post("/api/converter")
