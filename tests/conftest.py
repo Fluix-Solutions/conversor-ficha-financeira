@@ -34,7 +34,9 @@ def pytest_configure(config):
 
 @pytest.fixture(scope="session")
 def alvo(request) -> Path:
-    return Path(request.config.getoption("--python-alvo")).resolve()
+    # absolute(), não resolve(): o python de um venv é um link simbólico, e
+    # segui-lo cairia no Python do sistema, sem as dependências do app.
+    return Path(request.config.getoption("--python-alvo")).absolute()
 
 
 @pytest.fixture(scope="session")

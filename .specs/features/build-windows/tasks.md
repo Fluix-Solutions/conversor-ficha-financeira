@@ -304,7 +304,7 @@ T9 → T10 → T11 → T12
 - [x] O comando de instalação que o `main` executa contém `--require-hashes` e `-r requirements-windows.lock`, e nenhum `requirements-desktop.txt` (mata M5)
 - [x] Com `--zip`, a saída traz o SHA-256 real do zip gerado e a lista de pacotes (mata M6)
 - [x] A pasta montada tem `converter.py`, `server.py`, `app_desktop.py`, `web/index.html`, `Conversor.bat` e `LEIA-ME.txt`, e o zip tem a raiz `Conversor de Ficha Financeira/` (WIN-02)
-- [x] `tests/conftest.py`: `alvo` usa `.resolve()`
+- [x] `tests/conftest.py`: `alvo` vira caminho absoluto com `.absolute()` (`.resolve()` seguiria o link do python do venv até o Python do sistema — corrigido em commit próprio)
 - [x] Mutantes M5 e M6 reaplicados num worktree descartável são mortos
 - [x] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
 - [x] Test count: 30 + 1 = 31 tests pass
