@@ -67,6 +67,12 @@ O andamento vem do callback `progresso(etapa, atual, total)` de
 - O modelo de OCR é carregado numa thread no arranque (`_aquecer_ocr`). Sem
   isso a 1ª chamada pagava ~2,5 s — e quem pagava era o usuário, porque o
   front consulta `/api/versao` ao abrir a página.
+- **Baixar o DPI do OCR NÃO acelera — já foi testado (2026-09-11).** Medido em
+  300/250/200/150 DPI: o tempo praticamente não muda (em 150 chegou a ser
+  *maior*), porque o rapidocr redimensiona a imagem para o tamanho fixo do
+  modelo de detecção — o gargalo é a inferência, não os pixels. Pior: na Serra,
+  DPI menor **muda os valores de lugar** na grade de meses (em 250 DPI
+  apareceram 3 linhas falhando a conferência contra o TOTAL). Não repetir.
 - **O `Dockerfile` é o que o Railway usa** (não o Procfile). Ele troca o
   `opencv-python` (com GUI, quebra com `libxcb.so.1` em container headless)
   pelo `opencv-python-headless`, e confere o import no build — imagem sem OCR
