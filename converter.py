@@ -434,10 +434,17 @@ RUBRICAS_C = {
     "127": "1/3 Férias",
     "128": "Dif. 1/3 Férias",
     "142": "A.T.S. Estatutário",
+    "143": "Ajuda Custo Magistério Internet",
     "146": "Adic. L. Especial 30%",
     "148": "Dif. Mín. Profissional",
     "150": "Abono",
     "161": "Incorp. Gratif. Ref. 12",
+    "185": "Indenização Férias",
+    "190": "Devolução Caixa",
+    "201": "13º Salário DT Rescisão",
+    "317": "Abono Férias DT Indenização",
+    "327": "Ajuda de Custo Magistério",
+    "1011": "Aux. Alimentação 13º Salário Rescisão",
 }
 
 _CPF_RE = re.compile(
@@ -674,6 +681,8 @@ ADICIONAL ADIC NOTURNO INSALUBRIDADE PERICULOSIDADE TEMPO SERVICO SERV DIRECAO
 FUNCAO GRATIFICADA SUBSTITUICAO ANTERIOR ANT MES SOBRE PISO COMPLEMENTO COMPL
 CONTRIBUICAO SINDICAL FAMILIA REP REPOSICAO DEVOLUCAO PERMANENCIA
 TRIENIO QUINQUENIO BIENIO PROGRESSAO ATS LEI ESTADUAL PLANTAO SEM
+INDENIZACAO RESCISAO CAIXA AJUDA CUSTO MAGISTERIO MAGISTER INTERNET
+NOMINAL DEVOLUCAO NOTURNA
 """.split()
 
 
@@ -1251,6 +1260,145 @@ def _converter_formato_d(pdf, avisos: list[str]):
 
 
 # ----------------------------------------------------------------------------
+# Fichas do Estado ESCANEADAS (PDF de imagem, sem texto). OCR da imagem de
+# cada página e remonta a tabela no mesmo formato do layout D. Como o OCR de
+# scan erra, cada linha é validada (soma dos 12 meses == total impresso) e o
+# que não fecha vira aviso "conferir".
+# ----------------------------------------------------------------------------
+_OCR_NUM_RE = re.compile(r"^-?\d{1,3}(?:[.,]\d{3})*[.,]\d{2}$")
+
+
+def _ocr_num(tok: str) -> float | None:
+    t = tok.strip().replace(" ", "").replace("O", "0").replace("o", "0")
+    t = re.sub(r"[:']", ".", t)                       # "100:00" / "00'0" -> ponto
+    if re.fullmatch(r"0+\.?0*", t) or t in ("000", "00.0"):
+        return 0.0
+    if not _OCR_NUM_RE.match(t):
+        return None
+    corpo = t[:-3].replace(".", "").replace(",", "")  # tira milhar
+    return float(corpo + "." + t[-2:]) if corpo.lstrip("-").isdigit() else None
+
+
+def _converter_ocr(caminho, avisos: list[str]):
+    eng = _ocr_engine()
+    if eng is None:
+        raise ConversaoError(
+            "Este PDF é uma digitalização (imagem) e o leitor de imagens (OCR) "
+            "não está disponível nesta instalação.\n"
+            "Instale as dependências de OCR ou use o app de computador."
+        )
+    import pymupdf
+
+    doc = pymupdf.open(caminho)
+    blocos: list[dict] = []
+    for pi in range(len(doc)):
+        page = doc[pi]
+        png = None
+        imgs = page.get_images(full=True)
+        if imgs:
+            big = max(imgs, key=lambda im: im[2] * im[3])
+            b = doc.extract_image(big[0])
+            if b["width"] * b["height"] >= 700 * 500:
+                png = b["image"]
+        if png is None:
+            png = page.get_pixmap(dpi=300).tobytes("png")
+
+        try:
+            res, _ = eng(png)
+        except Exception:
+            res = None
+        if not res:
+            continue
+
+        itens = [(min(p[0] for p in box), min(p[1] for p in box), txt)
+                 for box, txt, _c in res]
+        linhas: list[list[tuple[float, float, str]]] = []
+        for it in sorted(itens, key=lambda z: (round(z[1] / 12), z[0])):
+            if linhas and abs(linhas[-1][0][1] - it[1]) < 11:
+                linhas[-1].append(it)
+            else:
+                linhas.append([it])
+
+        texto_pag = " ".join(t for ln in linhas for _x, _y, t in ln)
+        ma = re.search(r"(?:ANO|Ano\s*Ref)[:\s]*?(\d{4})", texto_pag)
+        if not ma:
+            mp = re.search(r"[Pp]er[ií]odo[:\s]*\d{2}/(\d{4})", texto_pag) or \
+                 re.search(r"[Pp]er[ií]odo[:\s]*(\d{4})", texto_pag)
+            if not mp:
+                continue
+            ano = int(mp.group(1))
+        else:
+            ano = int(ma.group(1))
+        msv = re.search(
+            r"(?:[Nn]ome\s*[Ss]ervidor|FUNCION[ÁA]RIO)[:\s]*([A-Z][A-Za-zÀ-Ú ]+?)\s*"
+            r"(?:CPF|Fonte|N[°º]|$)", texto_pag
+        )
+        rotulo = msv.group(1).strip() if msv else f"Contrato {len(blocos) + 1}"
+
+        dados = {mes: {} for mes in MESES}
+        ordem: list[str] = []
+        secao = None
+        for ln in linhas:
+            cells = sorted(ln, key=lambda c: c[0])
+            nums, rotulos = [], []
+            for _x, _y, t in cells:
+                v = _ocr_num(t)
+                if v is not None:
+                    nums.append(v)
+                elif re.match(r"^\d{1,4}\s*[A-Za-zÀ-Ú]", t):
+                    rotulos.append(t)
+
+            plano = _norm_rubrica(" ".join(t for _x, _y, t in cells))
+            # Linha de seção (poucos/nenhum número) ou a linha "TOTAL ...".
+            if len(nums) < 12 or plano.startswith("total"):
+                if plano.startswith(("vantagens", "proventos")):
+                    secao = "V"
+                elif plano.startswith(
+                    ("descontos", "liquido", "informativo", "total")
+                ):
+                    secao = None
+                continue
+            if secao != "V" or len(rotulos) != 1:
+                continue
+            mrot = re.match(r"^(\d{1,4})\s*(.+)$", rotulos[0])
+            codigo, nome_bruto = mrot.group(1), mrot.group(2)
+            nome = RUBRICAS_C.get(codigo) or _nome_canonico(nome_bruto)
+            meses_v, total_v = nums[:12], (nums[12] if len(nums) >= 13 else sum(nums[:12]))
+            if abs(sum(meses_v) - total_v) > 0.02:
+                avisos.append(
+                    f"Página {pi + 1}, rubrica {codigo} ({nome}): a leitura por "
+                    f"imagem não fechou (meses {sum(meses_v):.2f} x total "
+                    f"{total_v:.2f}) - CONFERIR na ficha."
+                )
+            coluna = _coluna(codigo, nome)
+            if coluna not in ordem:
+                ordem.append(coluna)
+            for mes, v in zip(MESES, meses_v):
+                dados[mes][coluna] = dados[mes].get(coluna, 0.0) + v
+
+        if ordem:
+            blocos.append({"ano": ano, "rotulo": rotulo, "dados": dados, "ordem": ordem})
+
+    if not blocos:
+        raise ConversaoError(
+            "Este PDF é uma digitalização e não consegui remontar a tabela pela "
+            "imagem (qualidade baixa ou layout não reconhecido).\n"
+            "Tente obter o PDF exportado direto do sistema (com texto)."
+        )
+    nomes = list(dict.fromkeys(b["rotulo"] for b in blocos))
+    if len(nomes) > 1:
+        avisos.append(
+            f"ATENÇÃO: este PDF tem {len(nomes)} servidores diferentes "
+            f"({', '.join(nomes)}). A planilha juntou todos por ano/mês."
+        )
+    avisos.append(
+        "Esta ficha foi lida por OCR de imagem - confira os valores contra o PDF "
+        "antes de usar no cálculo."
+    )
+    return blocos
+
+
+# ----------------------------------------------------------------------------
 def _detectar_formato(pdf) -> str:
     bruto = ""
     amostra = ""
@@ -1291,43 +1439,51 @@ def converter(pdf_path: Path, out_path: Path, origem: str) -> dict:
     with pdfplumber.open(pdf_path) as pdf:
         tem_texto = any((p.extract_text() or "").strip() for p in pdf.pages[:5])
         if not tem_texto:
-            raise ConversaoError(
-                "Este PDF é uma digitalização (imagem), sem texto selecionável.\n"
-                "Para converter seria necessário OCR, que ainda não está disponível "
-                "neste programa. Tente obter o PDF exportado direto do sistema."
-            )
-        fmt = _detectar_formato(pdf)
-
-        if origem == "serra" and fmt in ("C", "D"):
-            raise ConversaoError(
-                f"Você escolheu '{ORIGENS['serra']}', mas este PDF parece ser uma "
-                f"ficha do {ORIGENS['estado']}.\n"
-                f"Troque o seletor para '{ORIGENS['estado']}' e converta de novo."
-            )
-        if origem == "estado" and fmt not in ("C", "D"):
-            raise ConversaoError(
-                f"Você escolheu '{ORIGENS['estado']}', mas este PDF parece ser uma "
-                f"ficha do {ORIGENS['serra']}.\n"
-                f"Troque o seletor para '{ORIGENS['serra']}' e converta de novo."
-            )
-
-        if origem == "estado":
-            blocos = (
-                _converter_formato_d(pdf, avisos)
-                if fmt == "D"
-                else _converter_formato_c(pdf, avisos, pdf_path)
-            )
-        elif fmt == "A":
-            matricula_atual = None
-            for page in pdf.pages:
-                res = _pagina_formato_a(page, avisos)
-                if not res:
-                    continue
-                matricula_atual = res.pop("matricula") or matricula_atual
-                res["rotulo"] = matricula_atual or "Contrato 1"
-                blocos.append(res)
+            if origem == "estado":
+                # Ficha do Estado escaneada: converte por OCR da imagem.
+                blocos = _converter_ocr(pdf_path, avisos)
+                fmt = "OCR"
+                pdf = None  # não usa mais o pdfplumber
+            else:
+                raise ConversaoError(
+                    "Este PDF do Município da Serra é uma digitalização (imagem) e "
+                    "a leitura por imagem ainda não é confiável para esse layout.\n"
+                    "Tente obter o PDF exportado direto do sistema (com texto)."
+                )
         else:
-            blocos = _converter_formato_b(pdf, avisos)
+            fmt = _detectar_formato(pdf)
+
+        if not blocos:  # ainda não veio pelo OCR
+            if origem == "serra" and fmt in ("C", "D"):
+                raise ConversaoError(
+                    f"Você escolheu '{ORIGENS['serra']}', mas este PDF parece ser "
+                    f"uma ficha do {ORIGENS['estado']}.\n"
+                    f"Troque o seletor para '{ORIGENS['estado']}' e converta de novo."
+                )
+            if origem == "estado" and fmt not in ("C", "D"):
+                raise ConversaoError(
+                    f"Você escolheu '{ORIGENS['estado']}', mas este PDF parece ser "
+                    f"uma ficha do {ORIGENS['serra']}.\n"
+                    f"Troque o seletor para '{ORIGENS['serra']}' e converta de novo."
+                )
+
+            if origem == "estado":
+                blocos = (
+                    _converter_formato_d(pdf, avisos)
+                    if fmt == "D"
+                    else _converter_formato_c(pdf, avisos, pdf_path)
+                )
+            elif fmt == "A":
+                matricula_atual = None
+                for page in pdf.pages:
+                    res = _pagina_formato_a(page, avisos)
+                    if not res:
+                        continue
+                    matricula_atual = res.pop("matricula") or matricula_atual
+                    res["rotulo"] = matricula_atual or "Contrato 1"
+                    blocos.append(res)
+            else:
+                blocos = _converter_formato_b(pdf, avisos)
 
     if not blocos:
         alvo = (

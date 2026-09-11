@@ -55,7 +55,16 @@ Electron não resolvem — é falta de assinatura de código). Os arquivos de bu
 `python app_web.py` / `python server.py` localmente.
 `app.py --selftest <serra|estado> <pdf>` ainda converte sem abrir janela.
 
-## Os layouts (`_detectar_formato` distingue A/B/C/D)
+## Os layouts (`_detectar_formato` distingue A/B/C/D; "OCR" p/ scan)
+
+**PDF escaneado (imagem, sem texto)** — só Estado. `_converter_ocr`: OCR
+(rapidocr) da imagem embutida de cada página, remonta a tabela igual ao
+layout D (código+nome + 13 nº estilo US, rótulo pode vir no meio da linha).
+**Cada linha é validada** (soma dos 12 meses == total impresso); o que não
+fecha vira aviso "CONFERIR". Sempre acrescenta o aviso "lida por OCR - confira".
+Serra escaneado → erro claro (OCR não confiável p/ layout A/B transposto).
+`requirements-desktop.txt` (não vai pro web).
+
 
 - **A — FPFF902** (Prefeitura da Serra, recente): texto normal, linhas
   `NNN Nome`. `_pagina_formato_a`. Cabeçalho de meses achado por
