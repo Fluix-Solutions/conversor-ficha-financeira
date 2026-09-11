@@ -154,25 +154,25 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | -------------- | ----- | ----- | ------ |
 | WIN-01 | P1: Build verificado | T7 | Implementing |
 | WIN-02 | P1: Build verificado | T7 | Implementing |
-| WIN-03 | P1: Build verificado | T3 | Implementing |
-| WIN-04 | P1: Build verificado | T6 | Implementing |
-| WIN-05 | P1: Build verificado | T5 | Implementing |
-| WIN-06 | P1: Build verificado | T6 | Implementing |
-| WIN-07 | P1: Build verificado | T6 | Implementing |
+| WIN-03 | P1: Build verificado | T3 | Verified |
+| WIN-04 | P1: Build verificado | T6 | Verified |
+| WIN-05 | P1: Build verificado | T5 | Verified |
+| WIN-06 | P1: Build verificado | T6 | Verified |
+| WIN-07 | P1: Build verificado | T6 | Verified |
 | WIN-08 | P1: Build verificado | T7 | Implementing |
-| WIN-09 | P1: Build verificado | T5, T6 | Implementing |
+| WIN-09 | P1: Build verificado | T5, T6 | Verified |
 | WIN-10 | P1: Build verificado | T4, T7 | Implementing |
 | WIN-11 | P1: Publicação por tag | T2, T7 | Implementing |
-| WIN-12 | P1: Publicação por tag | T4 | Implementing |
-| WIN-13 | P1: Publicação por tag | T2 | Implementing |
+| WIN-12 | P1: Publicação por tag | T4 | Verified |
+| WIN-13 | P1: Publicação por tag | T2 | Verified |
 | WIN-14 | P1: Publicação por tag | T7 | Implementing |
 | WIN-15 | P1: Publicação por tag | T7 | Implementing |
 | WIN-16 | P1: Dependências travadas | T1, T3 | Implementing |
-| WIN-17 | P1: Dependências travadas | T1 | Implementing |
-| WIN-18 | P1: Dependências travadas | T1 | Implementing |
-| WIN-19 | P2: Versão e docs | T2 | Implementing |
+| WIN-17 | P1: Dependências travadas | T1 | Verified |
+| WIN-18 | P1: Dependências travadas | T1 | Verified |
+| WIN-19 | P2: Versão e docs | T2 | Verified |
 | WIN-20 | P2: Versão e docs | T8 | Implementing |
-| WIN-21 | P2: Versão e docs | T8 | Implementing |
+| WIN-21 | P2: Versão e docs | T8 | Verified |
 
 **Coverage:** 21 total, 21 mapped to tasks, 0 unmapped
 

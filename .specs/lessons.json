@@ -1,0 +1,81 @@
+{
+  "schema": 1,
+  "promote_threshold": 2,
+  "window_days": 45,
+  "quarantine_threshold": 2,
+  "next_id": 5,
+  "lessons": [
+    {
+      "id": "L-001",
+      "key": "surviving_mutant::test that the orchestrating entry point actually calls each tested helper not only the helper in isolation",
+      "text": "Test that the orchestrating entry point actually calls each tested helper, not only the helper in isolation",
+      "signal": "surviving_mutant",
+      "scope": "build-script",
+      "status": "candidate",
+      "features": [
+        "build-windows"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M5 construir_portatil.py:187 (WIN-16) (build-script)"
+      ],
+      "created": "2026-09-11T17:54:22Z",
+      "last_seen": "2026-09-11T17:54:22Z"
+    },
+    {
+      "id": "L-002",
+      "key": "surviving_mutant::cover every cli flag branch of a build script with a test that runs main with that flag",
+      "text": "Cover every CLI flag branch of a build script with a test that runs main with that flag",
+      "signal": "surviving_mutant",
+      "scope": "build-script",
+      "status": "candidate",
+      "features": [
+        "build-windows"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M6 construir_portatil.py:241 (WIN-10) (build-script)"
+      ],
+      "created": "2026-09-11T17:54:23Z",
+      "last_seen": "2026-09-11T17:54:23Z"
+    },
+    {
+      "id": "L-003",
+      "key": "ac_gap::give every publishing ci workflow a non publishing run path before using it as a verification gate",
+      "text": "Give every publishing CI workflow a non-publishing run path before using it as a verification gate",
+      "signal": "ac_gap",
+      "scope": "ci-workflow",
+      "status": "candidate",
+      "features": [
+        "build-windows"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "WIN-20 README.md:115-141; .github/workflows/windows.yml:16 (ci-workflow)"
+      ],
+      "created": "2026-09-11T17:54:23Z",
+      "last_seen": "2026-09-11T17:54:23Z"
+    },
+    {
+      "id": "L-004",
+      "key": "ac_gap::fail a release job when the target tag already exists on a commit other than the one that was built",
+      "text": "Fail a release job when the target tag already exists on a commit other than the one that was built",
+      "signal": "ac_gap",
+      "scope": "ci-workflow",
+      "status": "candidate",
+      "features": [
+        "build-windows"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "WIN-01 .github/workflows/windows.yml:116-117 (ci-workflow)"
+      ],
+      "created": "2026-09-11T17:54:23Z",
+      "last_seen": "2026-09-11T17:54:23Z"
+    }
+  ]
+}
