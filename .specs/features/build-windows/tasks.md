@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/build-windows/design.md`
-**Status**: Done (gate CI verde; aguardando 2ª verificação)
+**Status**: In Progress (correções da 2ª rodada)
 
 ---
 
@@ -65,6 +65,12 @@ T7 → T8
 
 ```
 T9 → T10 → T11 → T12 → T13 → T14
+```
+
+### Phase 5: Correções do Verifier (2ª rodada: FAIL)
+
+```
+T15 → T16
 ```
 
 ---
@@ -447,6 +453,60 @@ T9 → T10 → T11 → T12 → T13 → T14
 **Gate**: build
 
 **Commit**: `fix(windows): build sdist-only deps with the locked setuptools`
+
+---
+
+### T15: Checagem da tag só quando publica
+
+**What**: No passo da tag, a consulta ao commit da tag existente e o `--sha-tag/--sha` só rodam quando a execução publica (`github.event_name == 'push'` ou `inputs.publicar`); PR e disparo sem publicar só calculam a tag.
+**Where**: `.github/workflows/windows.yml`
+**Depends on**: None
+**Reuses**: passo da tag (T11)
+**Requirement**: WIN-22, WIN-23, WIN-24 (gap G1 da 2ª rodada)
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] Variável `PUBLICA` no passo da tag = `github.event_name == 'push' || inputs.publicar`; `gh api` + `--sha-tag` só com `PUBLICA=true`
+- [x] Simulação local do passo: com `PUBLICA=false` e a tag existindo noutro commit, passa; com `PUBLICA=true`, falha mostrando os dois commits
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [ ] Gate CI: PR verde
+
+**Tests**: none
+**Gate**: build
+
+**Commit**: `fix(ci): check the release tag commit only on publishing runs`
+
+---
+
+### T16: Documentação: gatilho de PR e estado do OCR no Windows
+
+**What**: README e CLAUDE.md citam o gatilho de PR e que o "Run workflow" só existe depois do merge; CLAUDE.md registra o OCR verde no Windows (run 34632113906) e a checagem de tag só em execução que publica; design.md registra T9-T16.
+**Where**: `CLAUDE.md`
+**Depends on**: T15
+**Reuses**: seções da T8/T12
+**Requirement**: WIN-20, WIN-21 (gap G2 da 2ª rodada)
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] CLAUDE.md: frase "No Windows, só depois do 1º run" substituída pelo resultado do run 34632113906; gatilho de PR; tag×commit só ao publicar
+- [ ] README: PR testa no Windows; "Run workflow" só após o workflow estar na `main`
+- [ ] design.md: seção com as correções T9-T16
+- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+
+**Tests**: none
+**Gate**: build
+
+**Commit**: `docs(windows): document the pr trigger and ci-verified ocr`
 
 ---
 

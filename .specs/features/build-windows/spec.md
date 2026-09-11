@@ -70,7 +70,7 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 9. The pipeline SHALL usar só fichas fictícias geradas no próprio teste; nenhum PDF real entra no repositório nem nos logs.  <!-- WIN-09 -->
 10. WHEN o build termina com sucesso THEN the pipeline SHALL registrar no log os pacotes instalados na pasta com versão, o tamanho do zip e o SHA-256 do zip.  <!-- WIN-10 -->
 11. WHEN o workflow é disparado manualmente com a opção `publicar` desmarcada THEN the pipeline SHALL rodar o build e os testes e disponibilizar o zip só como artefato por 14 dias, sem criar tag nem Release.  <!-- WIN-22 -->
-12. IF a tag da Release já existe apontando para um commit diferente do que está sendo construído THEN the pipeline SHALL falhar antes do build com uma mensagem que mostra os dois commits.  <!-- WIN-23 -->
+12. IF a execução vai publicar (tag enviada, ou disparo manual com `publicar` marcado) e a tag da Release já existe apontando para um commit diferente do que está sendo construído THEN the pipeline SHALL falhar antes do build com uma mensagem que mostra os dois commits; execuções que só testam (PR, `publicar` desmarcado) SHALL NOT fazer essa checagem.  <!-- WIN-23 -->
 13. WHEN um pull request para a `main` altera arquivos do app, do build ou dos testes THEN the pipeline SHALL rodar o build e os testes no Windows e deixar o zip só como artefato, sem criar tag nem Release.  <!-- WIN-24 -->
 
 **Independent Test**: Disparar o workflow com `publicar` desmarcado (`gh workflow run windows.yml -f publicar=false`); o job de build fica verde só se WIN-04..07 passarem, o zip aparece como artefato e nenhuma tag/Release é criada. Com `publicar` marcado, a Release `v<server.VERSAO>` aparece.

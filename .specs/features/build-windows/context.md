@@ -58,3 +58,4 @@ Gerar, a partir do Mac, a pasta portátil Windows do conversor num runner Window
 - Aviso de WebView2 ausente (hoje o pywebview cai no motor do IE sem avisar).
 - Instalador assinado (ex.: Azure Trusted Signing).
 - Migrar para o pacote `rapidocr` novo e Python 3.13+.
+- Zip sem `__pycache__` de `converter`/`server` (o autoteste 6/6 importa depois da limpeza; rodar com `python -B`). Cosmético — gap G3 da 2ª verificação.
