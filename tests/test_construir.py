@@ -46,6 +46,41 @@ def test_instala_do_lock_exigindo_hashes():
     assert cmd[1:4] == ["-m", "pip", "install"]
 
 
+def test_zip_tem_uma_pasta_raiz_com_o_lancador(tmp_path):
+    alvo = tmp_path / cp.NOME
+    (alvo / "python").mkdir(parents=True)
+    (alvo / "Conversor.bat").write_text("@echo off")
+    (alvo / "LEIA-ME.txt").write_text("leia")
+    (alvo / "python" / "python.exe").write_bytes(b"MZ")
+    destino = tmp_path / "saida.zip"
+
+    cp.zipar(alvo, destino)
+
+    nomes = zipfile.ZipFile(destino).namelist()
+    assert all(n.startswith("Conversor de Ficha Financeira/") for n in nomes)
+    assert "Conversor de Ficha Financeira/Conversor.bat" in nomes
+    assert "Conversor de Ficha Financeira/LEIA-ME.txt" in nomes
+    assert "Conversor de Ficha Financeira/python/python.exe" in nomes
+
+
+def test_registro_lista_pacotes_com_versao(tmp_path, capsys):
+    z = tmp_path / "x.zip"
+    z.write_bytes(b"zip")
+    cp.registrar(Path(sys.executable), z)
+    saida = capsys.readouterr().out
+    assert "pytest==9.1.1" in saida
+    assert "openpyxl==3.1.5" in saida
+
+
+def test_registro_mostra_tamanho_e_sha256_do_zip(tmp_path, capsys):
+    z = tmp_path / "x.zip"
+    z.write_bytes(b"a" * 2_500_000)
+    cp.registrar(Path(sys.executable), z)
+    saida = capsys.readouterr().out
+    assert hashlib.sha256(b"a" * 2_500_000).hexdigest() in saida
+    assert "2.5 MB" in saida
+
+
 def test_main_para_antes_de_extrair_se_o_hash_nao_bate(tmp_path, monkeypatch):
     """Zip do Python adulterado: o build falha e nada é extraído/instalado."""
     def falso(url, destino):

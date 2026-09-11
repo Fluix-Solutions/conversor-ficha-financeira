@@ -7,7 +7,7 @@
 
 ## Architecture Overview
 
-Um workflow do GitHub Actions com dois jobs. O job `build` (Windows, `contents: read`) roda o mesmo `construir_portatil.py` de hoje, agora com integridade (SHA-256 do Python embutido + lock com hash), e em seguida roda a suíte `pytest` **com o Python da pasta gerada** como alvo. Só se tudo passar ele gera o zip e o sobe como artefato. O job `release` (Ubuntu, `contents: write`) baixa esse artefato e cria a Release — nunca sobrescreve uma existente.
+Um workflow do GitHub Actions com dois jobs. O job `build` (Windows, `contents: read`) roda o mesmo `construir_portatil.py` de hoje, agora com integridade (SHA-256 do Python embutido + lock com hash), e em seguida roda a suíte `pytest` **com o Python da pasta gerada** como alvo. O zip é gerado no fim do `construir_portatil.py` (antes dos testes, então sai sem resíduo deles), mas só sobe como artefato se os testes passarem. O job `release` (Ubuntu, `contents: write`) baixa esse artefato e cria a Release — nunca sobrescreve uma existente.
 
 A suíte de verificação é a mesma no Mac e no CI: ela recebe o interpretador-alvo por opção (`--python-alvo`). No Mac aponta para o `.venv`; no CI, para `portatil/.../python/python.exe`. O pytest roda no Python do host (só precisa de pytest) e executa o alvo por subprocesso — assim nada de teste entra na pasta distribuída.
 
@@ -17,10 +17,9 @@ graph TD
     D[Run workflow manual] --> P
     P[build: release.py tag<br/>tag x server.VERSAO] -->|falhou| X[job vermelho, nada publicado]
     P --> U[pytest unit: lock, release.py, construir]
-    U --> B[construir_portatil.py<br/>SHA-256 embed + pip --require-hashes]
+    U --> B[construir_portatil.py --zip<br/>SHA-256 embed + pip --require-hashes<br/>zip + pacotes + tamanho + SHA-256]
     B --> V[pytest e2e --python-alvo pasta/python.exe<br/>imports, ficha texto, ficha OCR, /api/versao]
-    V --> Z[construir: zip + pip freeze + tamanho + SHA-256]
-    Z --> A[upload-artifact archive:false, 14 dias]
+    V --> A[upload-artifact archive:false, 14 dias]
     A --> R[release job ubuntu: Release existe?]
     R -->|sim| X
     R -->|não| G[gh release create tag zip --notes-file]
@@ -92,7 +91,8 @@ graph TD
   - `SHA256_EMBED` (constante) + `conferir_sha256(arquivo: Path, esperado: str) -> None` — levanta `RuntimeError` com os dois hashes; chamada logo após o download, antes de extrair (WIN-03).
   - Passo 3 passa a `pip install --require-hashes -r requirements-windows.lock` (WIN-16).
   - `zipar(alvo: Path, destino: Path) -> None` — zip com raiz `Conversor de Ficha Financeira/` (WIN-12).
-  - CLI: `python construir_portatil.py [destino] [--zip ARQ]`; com `--zip`, depois do autoteste imprime `pip freeze` da pasta, gera o zip e imprime tamanho e SHA-256 (WIN-10).
+  - `registrar(python_exe: Path, arq_zip: Path) -> None` — imprime `nome==versão` de cada pacote (via `importlib.metadata` no Python da pasta; não depende de pip), tamanho e SHA-256 do zip (WIN-10).
+  - CLI: `python construir_portatil.py [destino] [--zip ARQ]`; com `--zip`, depois do autoteste gera o zip e chama `registrar`.
 - **Dependencies**: Windows para rodar o `main`; funções novas são puras e testáveis no Mac.
 - **Reuses**: todo o fluxo atual.
 

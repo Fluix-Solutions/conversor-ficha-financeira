@@ -147,7 +147,7 @@ T7 → T8
 
 ### T4: Zip e registro do build
 
-**What**: `construir_portatil.py --zip ARQ` gera o zip com raiz `Conversor de Ficha Financeira/` e imprime `pip freeze`, tamanho e SHA-256.
+**What**: `construir_portatil.py --zip ARQ` gera o zip com raiz `Conversor de Ficha Financeira/` e imprime os pacotes com versão (`importlib.metadata`), tamanho e SHA-256.
 **Where**: `construir_portatil.py`
 **Depends on**: T3
 **Reuses**: `construir_portatil.py:182-185`
@@ -160,9 +160,9 @@ T7 → T8
 
 **Done when**:
 
-- [ ] `tests/test_construir.py`: `zipar` numa pasta falsa gera zip cujas entradas começam todas por `Conversor de Ficha Financeira/` e contém `Conversor de Ficha Financeira/Conversor.bat` e `.../LEIA-ME.txt` (WIN-12); a função de registro imprime o tamanho e o SHA-256 real do zip (WIN-10)
-- [ ] Gate check passes (fim de fase): `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py`
-- [ ] Test count: 22 + 3 = 25 tests pass
+- [x] `tests/test_construir.py`: `zipar` numa pasta falsa gera zip cujas entradas começam todas por `Conversor de Ficha Financeira/` e contém `Conversor de Ficha Financeira/Conversor.bat` e `.../LEIA-ME.txt` (WIN-12); a função de registro imprime o tamanho e o SHA-256 real do zip (WIN-10)
+- [x] Gate check passes (fim de fase): `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py`
+- [x] Test count: 22 + 3 = 25 tests pass
 
 **Tests**: unit
 **Gate**: build
