@@ -136,10 +136,16 @@ Defina as variáveis de ambiente antes de subir:
 
 1. Suba a pasta para um repositório GitHub.
 2. No Railway: **New Project → Deploy from GitHub repo**.
-3. O Railway detecta Python, instala o `requirements.txt` e usa o `Procfile`
-   (`gunicorn server:app`). O `runtime.txt` fixa o Python 3.12.
+3. O Railway detecta o **`Dockerfile`** e o usa (ignorando `Procfile` /
+   `runtime.txt`). O Dockerfile existe por um motivo específico: o `rapidocr`
+   puxa `opencv-python` com interface gráfica, que num container headless
+   quebra no import (`libxcb.so.1`); ele troca pela build headless e confere
+   o import ainda no build, de modo que uma imagem sem OCR **falha ali** em
+   vez de subir quebrada.
 4. Em **Variables**, defina `CONVERSOR_SENHA` (e opcionalmente `CONVERSOR_USUARIO`).
 5. Pronto — a URL gerada pelo Railway é o conversor online.
+6. Confira em `GET /api/versao`: deve vir `"ocr": true`. Se vier `false`, o
+   `ocr_erro` diz o motivo e fichas escaneadas serão recusadas.
 
 **Tamanho da instância.** O OCR pesa: as dependências somam ~210 MB
 (opencv sozinho são ~118 MB) e o pico de RAM de uma conversão medido foi de

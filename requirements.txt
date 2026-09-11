@@ -9,9 +9,13 @@ flask>=3.0
 gunicorn>=21.0
 
 # OCR - necessário para converter fichas ESCANEADAS (PDF de imagem, sem
-# texto), Serra e Estado. Pesa ~210 MB (opencv sozinho são ~118 MB) e o pico
-# de RAM de uma conversão chega a ~580 MB: a instância precisa de folga.
-# opencv-python-headless vem antes de propósito, pra o rapidocr não puxar o
-# opencv-python "cheio".
-opencv-python-headless>=4.9
+# texto), Serra e Estado. Pesa ~210 MB e o pico de RAM de uma conversão
+# chega a ~580 MB: a instância precisa de folga.
+#
+# ATENÇÃO: o rapidocr declara dependência de `opencv-python` (a build COM
+# interface gráfica). Pedir `opencv-python-headless` aqui NÃO impede isso —
+# são distribuições diferentes e o pip instala as duas. Em container headless
+# a build cheia quebra no import (libxcb.so.1). Quem resolve é o Dockerfile,
+# que troca pela headless depois de instalar. Se um dia sair do Docker, essa
+# troca precisa ser refeita no novo builder.
 rapidocr-onnxruntime>=1.3

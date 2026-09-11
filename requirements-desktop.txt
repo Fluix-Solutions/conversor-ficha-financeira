@@ -2,8 +2,8 @@
 -r requirements-base.txt
 pywebview>=6.0
 
-# OCR - lê os NOMES das rubricas nas fichas cifradas do Estado quando o código
-# ainda não está mapeado em RUBRICAS_C. opencv-python-headless vem antes de
-# propósito, pra o rapidocr não puxar o opencv-python "cheio".
-opencv-python-headless>=4.9
+# OCR - converte fichas ESCANEADAS (Serra e Estado) e lê os NOMES das rubricas
+# no layout C quando o código não está em RUBRICAS_C.
+# Nota: o rapidocr puxa `opencv-python` (build com GUI). No desktop tudo bem;
+# em servidor headless ela quebra no import - ver o Dockerfile.
 rapidocr-onnxruntime>=1.3

@@ -1,0 +1,17 @@
+.git/
+.gitignore
+__pycache__/
+*.pyc
+.venv/
+build/
+dist/
+PDF/
+*.pdf
+*.xlsx
+*.png
+ui/
+app.py
+app_web.py
+Conversor.bat
+requirements-desktop.txt
+CLAUDE.md
