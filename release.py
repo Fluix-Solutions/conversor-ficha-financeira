@@ -1,7 +1,8 @@
 """
 Regras da Release Windows, usadas pelo workflow `.github/workflows/windows.yml`.
 
-    python release.py tag [--ref-tag vX.Y]      -> imprime a tag da Release
+    python release.py tag [--ref-tag vX.Y] [--sha-tag S --sha S]
+                                                -> imprime a tag da Release
     python release.py notas --tag vX.Y --zip Z  -> imprime as notas (Markdown)
 
 Só biblioteca padrão: roda no runner antes de qualquer dependência instalada.
@@ -47,6 +48,17 @@ def tag_release(ref_tag: str | None, versao: str) -> str:
     return ref_tag
 
 
+def conferir_commit_da_tag(tag: str, sha_da_tag: str, sha_atual: str) -> None:
+    """A tag já existe (sha_da_tag não vazio) num commit diferente do que está
+    sendo construído? Então a Release ficaria presa ao commit antigo, com o
+    zip de outro — o `gh release create --target` não move tag existente."""
+    if sha_da_tag and sha_da_tag != sha_atual:
+        raise ErroRelease(
+            f"a tag {tag} já existe no commit {sha_da_tag}, mas este build é do "
+            f"commit {sha_atual}. Suba o VERSAO ou apague a tag antiga."
+        )
+
+
 def nome_zip(tag: str) -> str:
     return f"Conversor-de-Ficha-Financeira-{tag}-windows-x64.zip"
 
@@ -77,6 +89,8 @@ def main(argv: list[str] | None = None) -> int:
     sub = ap.add_subparsers(dest="cmd", required=True)
     t = sub.add_parser("tag")
     t.add_argument("--ref-tag")
+    t.add_argument("--sha-tag", default="", help="commit da tag, se já existir")
+    t.add_argument("--sha", default="", help="commit que está sendo construído")
     n = sub.add_parser("notas")
     n.add_argument("--tag", required=True)
     n.add_argument("--zip", required=True, type=Path)
@@ -84,7 +98,9 @@ def main(argv: list[str] | None = None) -> int:
 
     try:
         if args.cmd == "tag":
-            print(tag_release(args.ref_tag, versao_app()))
+            tag = tag_release(args.ref_tag, versao_app())
+            conferir_commit_da_tag(tag, args.sha_tag, args.sha)
+            print(tag)
         else:
             sha = hashlib.sha256(args.zip.read_bytes()).hexdigest()
             print(notas_release(args.tag, sha))

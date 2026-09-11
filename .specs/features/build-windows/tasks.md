@@ -331,9 +331,9 @@ T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `tests/test_release.py`: tag existente em outro commit → `ErroRelease` com os dois SHAs; mesmo commit → aceita; tag inexistente (SHA vazio) → aceita; CLI `tag --sha-tag X --sha Y` com X ≠ Y sai com 1
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
-- [ ] Test count: 31 + 4 = 35 tests pass
+- [x] `tests/test_release.py`: tag existente em outro commit → `ErroRelease` com os dois SHAs; mesmo commit → aceita; tag inexistente (SHA vazio) → aceita; CLI `tag --sha-tag X --sha Y` com X ≠ Y sai com 1
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
+- [x] Test count: 31 + 4 = 35 tests pass
 
 **Tests**: unit
 **Gate**: quick

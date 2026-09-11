@@ -40,6 +40,38 @@ def test_sem_tag_usa_a_versao_do_app():
     assert release.tag_release(None, "1.1") == "v1.1"
 
 
+def test_tag_existente_em_outro_commit_falha_mostrando_os_dois():
+    with pytest.raises(release.ErroRelease) as e:
+        release.conferir_commit_da_tag("v1.1", "a" * 40, "b" * 40)
+    assert "a" * 40 in str(e.value)
+    assert "b" * 40 in str(e.value)
+
+
+def test_tag_existente_no_mesmo_commit_e_aceita():
+    release.conferir_commit_da_tag("v1.1", "c" * 40, "c" * 40)
+
+
+def test_tag_que_ainda_nao_existe_e_aceita():
+    release.conferir_commit_da_tag("v1.1", "", "c" * 40)
+
+
+def test_cli_tag_em_outro_commit_sai_com_1():
+    r = subprocess.run(
+        [sys.executable, str(RAIZ / "release.py"), "tag",
+         "--sha-tag", "a" * 40, "--sha", "b" * 40],
+        capture_output=True, text=True,
+    )
+    assert r.returncode == 1
+    assert "a" * 40 in r.stderr and "b" * 40 in r.stderr
+    ok = subprocess.run(
+        [sys.executable, str(RAIZ / "release.py"), "tag",
+         "--sha-tag", "", "--sha", "b" * 40],
+        capture_output=True, text=True,
+    )
+    assert ok.returncode == 0
+    assert ok.stdout.strip() == "v1.1"
+
+
 def test_nome_do_zip():
     assert release.nome_zip("v1.1") == "Conversor-de-Ficha-Financeira-v1.1-windows-x64.zip"
 
