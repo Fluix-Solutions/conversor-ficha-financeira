@@ -87,8 +87,10 @@ verba são **somados**.
   - **sempre confira a planilha contra o PDF** antes de usar no cálculo;
   - scans de qualidade muito baixa são **recusados** com erro claro, em vez de
     gerar uma planilha duvidosa;
-  - exige as dependências de OCR (`requirements-desktop.txt`); a **versão web
-    não tem OCR** e recusa PDFs escaneados.
+  - exige as dependências de OCR — presentes tanto no app de desktop
+    (`requirements-desktop.txt`) quanto na versão web. Onde o OCR não estiver
+    disponível, o PDF escaneado é recusado com mensagem clara, e
+    `GET /api/versao` mostra `"ocr": false` com o motivo.
 - No layout B, rubricas pagas em poucos meses são posicionadas pela coordenada
   do número no PDF; convém conferir os meses parciais nas primeiras fichas.
 
@@ -152,7 +154,8 @@ Defina as variáveis de ambiente antes de subir:
 **~580 MB**. A instância precisa de folga — numa pequena demais o processo é
 morto no meio da conversão.
 
-Arquivos de deploy: `requirements.txt`, `Procfile`, `runtime.txt`.
+Arquivos de deploy: `Dockerfile` (o que o Railway usa), `.dockerignore`,
+`requirements.txt`. `Procfile` e `runtime.txt` ficam para outros builders.
 
 ## Arquivos do projeto
 
