@@ -186,10 +186,10 @@ T7 → T8
 
 **Done when**:
 
-- [ ] `tests/test_portatil.py::test_ficha_texto`: convertendo `ficticia.pdf` com origem `estado`, a aba Proventos tem cabeçalho `Ano, Mês, VENCIMENTO, ADICIONAL TEMPO SERVICO, GRATIFICACAO`, 12 linhas de 2020 com os valores exatos esperados, e nenhuma coluna `IMPOSTO` (WIN-05)
-- [ ] O gerador só usa dados inventados (`FULANO DE TAL FICTICIO`) e grava num diretório temporário (WIN-09)
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q`
-- [ ] Test count: 25 + 1 = 26 tests pass
+- [x] `tests/test_portatil.py::test_ficha_texto`: convertendo `ficticia.pdf` com origem `estado`, a aba Proventos tem cabeçalho `Ano, Mês, VENCIMENTO, ADICIONAL TEMPO SERVICO, GRATIFICACAO`, 12 linhas de 2020 com os valores exatos esperados, e nenhuma coluna `IMPOSTO` (WIN-05)
+- [x] O gerador só usa dados inventados (`FULANO DE TAL FICTICIO`) e grava num diretório temporário (WIN-09)
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q`
+- [x] Test count: 25 + 1 = 26 tests pass
 
 **Tests**: e2e
 **Gate**: full
