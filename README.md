@@ -138,8 +138,8 @@ rodam o mesmo workflow no Windows, só para testar (sem tag nem Release). O
 botão **Run workflow** só aparece depois que o `windows.yml` está na `main`.
 
 Se a tag `v<VERSAO>` já existir apontando para **outro** commit (por exemplo,
-um build anterior que falhou), o workflow para logo no início mostrando os
-dois commits: suba o `VERSAO` ou apague a tag antiga. (Só em execução que
+você enviou a tag, o build falhou e a correção foi para um commit novo), o
+workflow para logo no início mostrando os dois commits: suba o `VERSAO` ou apague a tag antiga. (Só em execução que
 publica; teste e PR não checam isso.)
 
 O que o workflow faz, e por que dá para confiar no zip:
