@@ -126,6 +126,17 @@ O build roda no **GitHub Actions**, num Windows de verdade
 3. Em ~15-30 min aparece a Release `v1.2` com
    `Conversor-de-Ficha-Financeira-v1.2-windows-x64.zip` e o SHA-256 nas notas.
 
+**Testar sem publicar.** No **Run workflow**, desmarque **publicar** (ou
+`gh workflow run windows.yml --ref <branch> -f publicar=false`). O build e
+todos os testes rodam no Windows igual, mas nenhuma tag nem Release é criada:
+o zip fica como **artefato** da execução por 14 dias (página da execução →
+seção *Artifacts*, ou `gh run download <id>`). É o caminho para testar o zip
+numa máquina com Smart App Control antes de publicar.
+
+Se a tag `v<VERSAO>` já existir apontando para **outro** commit (por exemplo,
+um build anterior que falhou), o workflow para logo no início mostrando os
+dois commits: suba o `VERSAO` ou apague a tag antiga.
+
 O que o workflow faz, e por que dá para confiar no zip:
 
 - confere o **SHA-256 do Python embutido** baixado do python.org;

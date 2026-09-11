@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/build-windows/design.md`
-**Status**: In Progress (correções do Verifier)
+**Status**: Done (aguardando 2ª verificação e gate CI)
 
 ---
 
@@ -384,9 +384,9 @@ T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] README: passo a passo de "testar sem publicar" e de baixar o zip do artefato
-- [ ] CLAUDE.md: frase sobre OCR no Windows corrigida; `publicar` e tag×commit documentados
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [x] README: passo a passo de "testar sem publicar" e de baixar o zip do artefato
+- [x] CLAUDE.md: frase sobre OCR no Windows corrigida; `publicar` e tag×commit documentados
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
 
 **Tests**: none
 **Gate**: build
