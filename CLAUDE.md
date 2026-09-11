@@ -57,13 +57,30 @@ Electron não resolvem — é falta de assinatura de código). Os arquivos de bu
 
 ## Os layouts (`_detectar_formato` distingue A/B/C/D; "OCR" p/ scan)
 
-**PDF escaneado (imagem, sem texto)** — só Estado. `_converter_ocr`: OCR
-(rapidocr) da imagem embutida de cada página, remonta a tabela igual ao
-layout D (código+nome + 13 nº estilo US, rótulo pode vir no meio da linha).
+**PDF escaneado (imagem, sem texto)** — Estado e Serra. Detectado em
+`converter()`: o texto do carimbo do PJe (assinatura/URL/"Num.") é descartado
+antes de medir, senão um scan parece "ter texto". OCR = rapidocr,
+`requirements-desktop.txt` (não vai pro web → lá o scan é recusado).
 **Cada linha é validada** (soma dos 12 meses == total impresso); o que não
 fecha vira aviso "CONFERIR". Sempre acrescenta o aviso "lida por OCR - confira".
-Serra escaneado → erro claro (OCR não confiável p/ layout A/B transposto).
-`requirements-desktop.txt` (não vai pro web).
+
+- **Estado** → `_converter_ocr`: remonta igual ao layout D (código+nome + 13
+  nº estilo US, rótulo pode vir no meio da linha).
+- **Serra** → `_converter_ocr_serra`: remonta a grade de 12 meses do layout
+  A/B. Pontos não óbvios:
+  - **Orientação**: `_ocr_linhas_serra` tenta 0°/90°/270°/180° e escolhe pelo
+    `_ocr_orient_score` — exige os meses em **ordem crescente de x**, senão a
+    página de cabeça para baixo casa os 12 meses e ganha do ângulo certo.
+  - **Grade dos meses**: NÃO usar o x do cabeçalho (rótulo alinhado à esquerda,
+    número à direita → desloca o mês). Espaçamento vem do cabeçalho, a âncora é
+    a coluna TOTAL, e o deslocamento fino é o que melhor encaixa os números
+    lidos na página.
+  - **Marcadores de seção** ("Proventos"/"TOTAL:") são procurados **célula a
+    célula**, não na linha concatenada: o carimbo do PJe cai no mesmo y e
+    colava lixo no rótulo.
+  - Linha cujo nome não tem letras reconhecíveis é **descartada** (ruído de
+    OCR viraria coluna sem sentido). Se a ficha inteira render < 2 colunas,
+    `ConversaoError` em vez de planilha duvidosa.
 
 
 - **A — FPFF902** (Prefeitura da Serra, recente): texto normal, linhas
@@ -144,8 +161,11 @@ folha diferentes; não se sobrepõem no mesmo ano).
 
 - **Deploy no Railway** (em andamento — usuário criou a conta; falta ligar o
   repo `WilkersonPenido/conversor-ficha-financeira` e gerar o domínio).
-- PDFs **escaneados** (imagem) da Serra → precisa OCR (Tesseract não instalado).
-  Plano: render + OCR + conferir contra a coluna Total.
+- Scan da Serra de **qualidade muito baixa** (ex.: `Serra Alternado 1.pdf`) é
+  recusado pelo filtro de qualidade. Melhorar exigiria pré-processar a imagem
+  (deskew/contraste) antes do OCR.
+- OCR no **web/Railway**: hoje fica de fora (~150 MB). Se ativar, subir o
+  `--timeout` do Procfile — OCR de ficha com várias páginas leva minutos.
 - Conversão em lote (pasta inteira).
 - Incluir Descontos/Outros, se o sistema precisar.
 - Testar com mais fichas reais.

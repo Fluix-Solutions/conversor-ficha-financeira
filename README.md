@@ -79,8 +79,16 @@ verba são **somados**.
 ## Limitações
 
 - Extrai apenas **Proventos** (não Descontos nem Outros).
-- **PDFs escaneados** (imagem, sem texto) não são suportados — precisariam de
-  OCR. O programa avisa quando detecta esse caso.
+- **PDFs escaneados** (imagem, sem texto) são lidos por **OCR**, tanto da Serra
+  quanto do Estado — inclusive quando a folha foi digitalizada deitada ou de
+  cabeça para baixo (a orientação é detectada automaticamente). Nesse modo:
+  - cada rubrica é conferida contra a coluna **TOTAL** impressa na ficha, e o
+    que não fecha vira aviso `CONFERIR`;
+  - **sempre confira a planilha contra o PDF** antes de usar no cálculo;
+  - scans de qualidade muito baixa são **recusados** com erro claro, em vez de
+    gerar uma planilha duvidosa;
+  - exige as dependências de OCR (`requirements-desktop.txt`); a **versão web
+    não tem OCR** e recusa PDFs escaneados.
 - No layout B, rubricas pagas em poucos meses são posicionadas pela coordenada
   do número no PDF; convém conferir os meses parciais nas primeiras fichas.
 

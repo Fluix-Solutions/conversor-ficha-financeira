@@ -34,6 +34,7 @@ MESES = [
 # Chave = código; valor = nome limpo como o sistema espera.
 RUBRICAS_CANONICAS = {
     "001": "Salário Base",
+    "010": "Saldo de Salário",
     "012": "Férias",
     "025": "Gratificação Assiduidade",
     "113": "Ext. Carga Horária Prof",
@@ -44,6 +45,7 @@ RUBRICAS_CANONICAS = {
     "212": "13º Salário",
     "222": "13º Salário Proporcional",
     "234": "Abono",
+    "498": "Líquido Mês Anterior",
     "613": "Extensão C.Horária 13º",
     "937": "13º Salário",
 }
@@ -1399,6 +1401,345 @@ def _converter_ocr(caminho, avisos: list[str]):
 
 
 # ----------------------------------------------------------------------------
+# Fichas do MUNICÍPIO DA SERRA escaneadas (PDF de imagem, sem texto).
+# OCR da imagem de cada página e remontagem da tabela de Proventos. Cada
+# rubrica é validada contra a coluna TOTAL impressa; o que não fecha vira
+# aviso "CONFERIR". OCR de scan erra, então nada aqui é usado sem conferência.
+# ----------------------------------------------------------------------------
+_SERRA_PERIODO_OCR = re.compile(r"(\d{2})/(\d{4})a(\d{2})/(\d{4})")
+_COD_NOME_OCR = re.compile(r"^(\d{3})\s*[-.]?\s*(.*)$")
+
+
+def _ocr_orient_score(linhas) -> float:
+    """Quão bem a página lida representa uma ficha da Serra na orientação certa:
+    conta os pares de meses consecutivos que aparecem em ordem crescente de x
+    (Janeiro à esquerda, Dezembro à direita). Página de cabeça para baixo casa
+    os 12 meses mas em ordem decrescente -> pontua baixo."""
+    cen, xt = _centros_meses_ocr(linhas)
+    if len(cen) < 4:
+        return 0.0
+    ok = sum(
+        1 for i in range(11)
+        if i in cen and i + 1 in cen and cen[i] < cen[i + 1]
+    )
+    return ok * 4 + len(cen) + (3 if xt is not None else 0)
+
+
+_OCR_CACHE_ROT: dict[tuple, list] = {}
+
+
+def _ocr_itens_rot(caminho, pi: int, deg: int):
+    """OCR de uma página girada `deg` graus -> [(x0, y0, x1, texto), ...]."""
+    ch = (str(caminho), pi, deg)
+    if ch in _OCR_CACHE_ROT:
+        return _OCR_CACHE_ROT[ch]
+    eng = _ocr_engine()
+    out: list[tuple] = []
+    if eng is not None:
+        try:
+            import pymupdf
+
+            d = pymupdf.open(caminho)
+            mat = pymupdf.Matrix(300 / 72, 300 / 72).prerotate(deg)
+            png = d[pi].get_pixmap(matrix=mat).tobytes("png")
+            d.close()
+            res, _ = eng(png)
+            for box, txt, _c in res or []:
+                xs = [p[0] for p in box]
+                ys = [p[1] for p in box]
+                out.append((min(xs), min(ys), max(xs), txt))
+        except Exception:
+            out = []
+    _OCR_CACHE_ROT[ch] = out
+    return out
+
+
+def _linhas_de_itens(itens):
+    linhas: list[list[tuple]] = []
+    for x0, y0, x1, t in sorted(itens, key=lambda z: (round(z[1] / 12), z[0])):
+        if linhas and abs(linhas[-1][0][3] - y0) < 12:
+            linhas[-1].append((x0, x1, t, y0))
+        else:
+            linhas.append([(x0, x1, t, y0)])
+    return [sorted([(x0, x1, t) for x0, x1, t, _y in ln], key=lambda c: c[0])
+            for ln in linhas]
+
+
+_OCR_SCORE_BOM = 11 * 4 + 8  # 12 meses em ordem + coluna TOTAL
+_OCR_SCORE_USAVEL = 20       # meses suficientes e em ordem p/ confiar no ângulo
+
+
+def _ocr_linhas_serra(caminho, pi, deg_pref=None):
+    """OCR da página -> (linhas, ângulo usado). Muitas fichas da Serra são
+    digitalizadas deitadas (a folha é paisagem); tenta 0°, 90°, 270°, 180° e
+    fica com a orientação em que o cabeçalho de meses aparece na horizontal e
+    em ordem crescente.
+
+    `deg_pref` é o ângulo que já funcionou numa página anterior: o documento
+    inteiro é digitalizado do mesmo jeito, então tentá-lo primeiro evita as 4
+    passadas de OCR por página (numa ficha de 28 páginas isso é a diferença
+    entre minutos e ~4x isso)."""
+    ordem = (0, 90, 270, 180)
+    if deg_pref is not None:
+        ordem = (deg_pref,) + tuple(d for d in ordem if d != deg_pref)
+
+    melhor, melhor_sc, melhor_deg = [], -1.0, None
+    for i, deg in enumerate(ordem):
+        linhas = _linhas_de_itens(_ocr_itens_rot(caminho, pi, deg))
+        sc = _ocr_orient_score(linhas)
+        if sc > melhor_sc:
+            melhor, melhor_sc, melhor_deg = linhas, sc, deg
+        if sc >= _OCR_SCORE_BOM:
+            break
+        # No ângulo que já funcionou antes, um score só razoável (meses achados
+        # e em ordem crescente) basta: numa página um pouco pior, procurar nos
+        # outros 3 ângulos custa 3 OCRs e nunca acha nada melhor.
+        if i == 0 and deg_pref is not None and sc >= _OCR_SCORE_USAVEL:
+            break
+    return melhor, (melhor_deg if melhor_sc >= _OCR_SCORE_USAVEL else None)
+
+
+def _centros_meses_ocr(linhas):
+    """Acha a linha de cabeçalho (a que casa com mais nomes de mês) e devolve
+    ({idx do mês: x central}, x central da coluna TOTAL)."""
+    melhor: dict[int, float] = {}
+    x_total = None
+    for ln in linhas:
+        c: dict[int, float] = {}
+        xt = None
+        for x0, x1, t in ln:
+            base = _norm_rubrica(t)
+            for idx, m in enumerate(MESES):
+                p = _norm_rubrica(m)[:3]
+                k = base.find(p)
+                if k >= 0:
+                    c[idx] = x0 + (x1 - x0) * (k + 1.5) / max(len(base), 1)
+            if "total" in base:
+                xt = (x0 + x1) / 2
+        if len(c) > len(melhor):
+            melhor, x_total = c, xt
+    return melhor, x_total
+
+
+def _converter_ocr_serra(caminho, avisos: list[str]):
+    eng = _ocr_engine()
+    if eng is None:
+        raise ConversaoError(
+            "Este PDF do Município da Serra é uma digitalização (imagem) e o "
+            "leitor de imagens (OCR) não está disponível nesta instalação.\n"
+            "Instale as dependências de OCR ou use o aplicativo de computador."
+        )
+    import pymupdf
+
+    n = len(pymupdf.open(caminho))
+    blocos: list[dict] = []
+    n_conferir = 0
+    nomes_cod: dict[str, str] = {}  # nome canônico por código (1ª leitura boa vence)
+    deg_pref = None   # orientação que já deu certo (o scan é igual no doc todo)
+    fichas_vazias = 0  # páginas que SÃO ficha mas o OCR não conseguiu remontar
+    for pi in range(n):
+        # Se várias páginas de ficha seguidas não renderam nada, o scan não tem
+        # qualidade para este layout — parar aqui em vez de gastar minutos de
+        # OCR em dezenas de páginas para no fim recusar do mesmo jeito.
+        if fichas_vazias >= 6 and not blocos:
+            avisos.append(
+                f"Parei na página {pi}: a leitura por imagem não conseguiu "
+                f"remontar nenhuma das primeiras fichas."
+            )
+            break
+
+        linhas, deg_ok = _ocr_linhas_serra(caminho, pi, deg_pref)
+        if deg_ok is not None:
+            deg_pref = deg_ok
+        if not linhas:
+            continue
+        texto = " ".join(t for ln in linhas for _a, _b, t in ln)
+        texto_c = _norm_rubrica(texto)
+        if not re.search(r"fichas?financeira", texto_c):
+            continue  # capa do processo / página sem ficha
+        fichas_vazias += 1  # zerado no fim da página se ela render alguma coluna
+
+        import unicodedata
+        texto_s = re.sub(r"\s+", "", unicodedata.normalize("NFKD", texto)
+                         .encode("ascii", "ignore").decode().lower())
+        mp = _SERRA_PERIODO_OCR.search(texto_s)
+        if not mp:
+            continue
+        ano, ano_fim = int(mp.group(2)), int(mp.group(4))
+        if ano != ano_fim:
+            avisos.append(
+                f"Pág. {pi + 1}: período cruza dois anos ({ano} a {ano_fim}); "
+                f"os valores foram lançados em {ano}."
+            )
+
+        mm = re.search(r"(\d{4,7})\s*([A-ZÀ-Ú][A-Za-zÀ-Ú]{5,})\s*Admiss", texto)
+        rotulo = mm.group(1) if mm else f"Contrato {len(blocos) + 1}"
+
+        centros, x_total = _centros_meses_ocr(linhas)
+        if len(centros) < 6 or x_total is None:
+            continue  # não localizou a grade de meses nesta página
+        cs = sorted(centros.values())
+        gaps = [b - a for a, b in zip(cs, cs[1:])]
+        tol = (sorted(gaps)[len(gaps) // 2] * 0.55) if gaps else 60.0
+        x_lo = min(cs) - tol
+
+        # 1ª passada: separa (código, nome, números, total impresso) de cada
+        # linha da seção Proventos e junta todos os x dos valores mensais num
+        # "pool" para calibrar a grade de 12 colunas pelos próprios números
+        # (o cabeçalho é alinhado à esquerda e os números à direita — usar o x
+        #  do cabeçalho desloca o mês).
+        dados = {m: {} for m in MESES}
+        ordem: list[str] = []
+        cruas: list[tuple] = []
+        pool: list[float] = []
+        secao = None
+        cod = nome = None
+        for ln in linhas:
+            # O carimbo/assinatura do PJe às vezes cai na mesma linha (mesmo y)
+            # de um rótulo de seção; por isso o marcador é procurado em cada
+            # célula isolada, não no texto da linha inteira concatenada.
+            palavras = [_norm_rubrica(t) for _a, _b, t in ln]
+            if any(w.startswith(("proventos", "vantagens")) and len(w) < 15 for w in palavras):
+                secao, cod = "P", None
+                continue
+            if any(w.startswith((
+                "total", "descontos", "outros", "liquido", "salariobase",
+                "fpff", "municipio", "digitalizado", "assinado", "https",
+            )) and len(w) < 20 for w in palavras):
+                secao, cod = None, None
+                continue
+            if secao != "P":
+                continue
+
+            nums, rot_txt = [], []
+            for x0, x1, t in ln:
+                v = _ocr_num(t)
+                xc = (x0 + x1) / 2
+                if v is not None and xc > x_lo:
+                    nums.append((xc, v))
+                else:
+                    rot_txt.append(t)
+
+            joined = re.sub(r"\s+", " ", " ".join(rot_txt)).strip()
+            m = _COD_NOME_OCR.match(joined)
+            if m:
+                cod_novo = m.group(1)
+                nb = limpar_nome(m.group(2)).strip(" -.")
+                if re.sub(r"\W", "", nb):
+                    nome_novo = RUBRICAS_CANONICAS.get(cod_novo) or _nome_canonico(nb) or nb
+                else:
+                    nome_novo = RUBRICAS_CANONICAS.get(cod_novo) or f"Rubrica {cod_novo}"
+                if "?" not in nome_novo and not nome_novo.startswith("Rubrica "):
+                    nomes_cod.setdefault(cod_novo, nome_novo)
+                nome_novo = nomes_cod.get(cod_novo, nome_novo)
+                if re.search(r"[A-Za-zÀ-Ú]{3,}", nome_novo):
+                    cod, nome = cod_novo, nome_novo
+                else:
+                    # nome sem letras reconhecíveis (ruído de OCR): descarta a
+                    # linha em vez de criar uma coluna sem sentido na planilha.
+                    cod, nome = None, None
+                    n_conferir += 1
+            if cod is None or not nums:
+                continue
+
+            total_lido = None
+            mensais: list[tuple] = []
+            for xc, v in sorted(nums):
+                if xc > x_total - tol:
+                    if total_lido is None:
+                        total_lido = v
+                    continue
+                mensais.append((xc, v))
+                pool.append(xc)
+            if mensais:
+                cruas.append((pi, cod, nome, mensais, total_lido))
+
+        if len(pool) < 6:
+            continue
+        # Grade de 12 colunas: o espaçamento vem do cabeçalho (regular mesmo
+        # quando o OCR desloca tudo), a âncora é a coluna TOTAL, e o ajuste
+        # fino é o deslocamento que melhor encaixa o conjunto de números lidos.
+        cabec = sorted(centros.values())
+        hgaps = sorted(b - a for a, b in zip(cabec, cabec[1:]))
+        g = hgaps[len(hgaps) // 2] if hgaps else 0.0
+        if g < 15:
+            continue
+
+        def _grade(d, k):
+            return x_total - g * (12 - k) + d
+
+        melhor_d, melhor_c, passo, d = 0.0, None, g / 30, -g * 0.7
+        while d <= g * 0.7:
+            c = sum(min(abs(xc - _grade(d, k)) for k in range(12)) for xc in pool)
+            if melhor_c is None or c < melhor_c:
+                melhor_c, melhor_d = c, d
+            d += passo
+
+        def _mes_idx(xc):
+            return min(range(12), key=lambda k: abs(xc - _grade(melhor_d, k)))
+
+        # 2ª passada: posiciona cada valor na grade e valida contra o total.
+        for pi_r, cod, nome, mensais, total_lido in cruas:
+            coluna = _coluna(cod, nome)
+            mesv: dict[int, float] = {}
+            idxs = [_mes_idx(xc) for xc, _v in mensais]
+            for (xc, v), idx in zip(mensais, idxs):
+                mesv[idx] = mesv.get(idx, 0.0) + v
+            if not any(mesv.values()):
+                continue
+            if len(set(idxs)) < len(idxs):
+                n_conferir += 1
+                avisos.append(
+                    f"Pág. {pi_r + 1}, {cod} {nome}: dois valores caíram no mesmo "
+                    f"mês na leitura por imagem — CONFERIR os meses na ficha."
+                )
+            soma = sum(mesv.values())
+            if total_lido is not None and abs(soma - total_lido) > 0.02:
+                n_conferir += 1
+                avisos.append(
+                    f"Pág. {pi_r + 1}, {cod} {nome}: a leitura por imagem não "
+                    f"fechou (meses {soma:.2f} × total impresso {total_lido:.2f}) "
+                    f"— CONFERIR na ficha."
+                )
+            elif total_lido is None:
+                n_conferir += 1
+                avisos.append(
+                    f"Pág. {pi_r + 1}, {cod} {nome}: não achei a coluna TOTAL para "
+                    f"conferir esta linha — CONFERIR na ficha."
+                )
+            if coluna not in ordem:
+                ordem.append(coluna)
+            for idx, v in mesv.items():
+                dados[MESES[idx]][coluna] = dados[MESES[idx]].get(coluna, 0.0) + v
+
+        if ordem:
+            blocos.append({"ano": ano, "rotulo": rotulo, "dados": dados, "ordem": ordem})
+            fichas_vazias = 0
+
+    total_colunas = len({v for b in blocos for v in b["ordem"]})
+    if not blocos or (n > 3 and total_colunas < 2):
+        raise ConversaoError(
+            "Este PDF do Município da Serra é uma digitalização e a leitura por "
+            "imagem não conseguiu remontar a tabela de forma confiável (qualidade "
+            "do scan muito baixa para este layout).\n"
+            "Tente obter o PDF exportado direto do sistema (com texto) ou uma "
+            "digitalização de melhor qualidade."
+        )
+    nomes = list(dict.fromkeys(b["rotulo"] for b in blocos))
+    if len(nomes) > 1:
+        avisos.append(
+            f"ATENÇÃO: este PDF tem {len(nomes)} contratos/matrículas "
+            f"({', '.join(nomes)}). A planilha somou todos por ano/mês."
+        )
+    avisos.append(
+        "Esta ficha foi lida por OCR de imagem — confira TODOS os valores contra "
+        "o PDF antes de usar no cálculo"
+        + (f" ({n_conferir} linha(s) marcada(s) para conferência)." if n_conferir else ".")
+    )
+    return blocos
+
+
+# ----------------------------------------------------------------------------
 def _detectar_formato(pdf) -> str:
     bruto = ""
     amostra = ""
@@ -1432,12 +1773,30 @@ def converter(pdf_path: Path, out_path: Path, origem: str) -> dict:
     if origem not in ORIGENS:
         raise ValueError(f"origem inválida: {origem!r} (use 'serra' ou 'estado')")
 
+    # Os caches de OCR são indexados pelo caminho do PDF. No servidor cada
+    # requisição usa um arquivo temporário novo, então nada é reaproveitado e
+    # as entradas antigas só acumulariam memória — o cache vale dentro de uma
+    # conversão (várias páginas / várias rotações), não entre conversões.
+    _OCR_CACHE.clear()
+    _OCR_CACHE_ROT.clear()
+
     avisos: list[str] = []
     blocos: list[dict] = []
-    ordem_colunas: list[str] = []
 
     with pdfplumber.open(pdf_path) as pdf:
-        tem_texto = any((p.extract_text() or "").strip() for p in pdf.pages[:5])
+        # "Tem texto" = o corpo da ficha veio como texto. PDFs escaneados de
+        # processo (PJe) ainda trazem o carimbo de assinatura como texto — esse
+        # boilerplate é descartado antes de medir.
+        _lixo = ("assinado eletronicamente", "https://pje", "num.", "núm",
+                 "número do documento", "numero do documento", "este documento",
+                 "digitalizado com", "consultadocumento")
+        _uteis = []
+        for _p in pdf.pages[:5]:
+            for _ln in decode_cid(_p.extract_text() or "").splitlines():
+                _s = _ln.strip()
+                if _s and not any(_s.lower().startswith(k) for k in _lixo):
+                    _uteis.append(_s)
+        tem_texto = len("\n".join(_uteis)) > 300
         if not tem_texto:
             if origem == "estado":
                 # Ficha do Estado escaneada: converte por OCR da imagem.
@@ -1445,11 +1804,10 @@ def converter(pdf_path: Path, out_path: Path, origem: str) -> dict:
                 fmt = "OCR"
                 pdf = None  # não usa mais o pdfplumber
             else:
-                raise ConversaoError(
-                    "Este PDF do Município da Serra é uma digitalização (imagem) e "
-                    "a leitura por imagem ainda não é confiável para esse layout.\n"
-                    "Tente obter o PDF exportado direto do sistema (com texto)."
-                )
+                # Ficha da Serra escaneada: converte por OCR da imagem.
+                blocos = _converter_ocr_serra(pdf_path, avisos)
+                fmt = "OCR"
+                pdf = None  # não usa mais o pdfplumber
         else:
             fmt = _detectar_formato(pdf)
 

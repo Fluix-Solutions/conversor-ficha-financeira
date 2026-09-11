@@ -4,8 +4,12 @@
 # requirements-base.txt.
 #
 # OCR (rapidocr) fica de fora aqui por ora - pesa ~150 MB e precisa de config
-# extra no servidor. Sem ele, código de rubrica desconhecido no layout C sai
-# como "Rubrica NNN". Adicionar quando o deploy estiver estável.
+# extra no servidor. O que se perde SEM ele:
+#   1. Fichas ESCANEADAS (PDF de imagem, sem texto) não convertem de jeito
+#      nenhum - Serra e Estado dão erro pedindo o PDF com texto;
+#   2. No layout C, código de rubrica fora de RUBRICAS_C sai "Rubrica NNN".
+# Ao ativar aqui, subir também o --timeout do Procfile: OCR de uma ficha de
+# várias páginas leva minutos, muito acima dos 120s atuais.
 pdfplumber>=0.11
 openpyxl>=3.1
 pymupdf>=1.24

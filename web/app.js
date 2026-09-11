@@ -72,17 +72,33 @@ function renderLista(filtro) {
   cList.hidden = false;
 }
 function escolherOrigem(o) {
+  if (state.origem !== o.chave) limparArquivo();
   state.origem = o.chave;
   cInput.value = o.rotulo;
   cList.hidden = true;
+  cInput.blur();  // sem isso o campo continua focado e a lista reabre sozinha
   atualizarPassos();
 }
 function abrirLista() { cInput.select(); renderLista(""); }
-cInput.addEventListener("focus", abrirLista);
+
+// Ao arrastar um arquivo do Explorer a janela perde o foco; quando o arquivo
+// é solto ela recupera e o navegador devolve o foco ao último campo ativo —
+// o que reabria a lista de origem sozinha. Esse foco "de volta" é ignorado.
+let focoDeVolta = false;
+window.addEventListener("blur", () => { focoDeVolta = true; });
+window.addEventListener("focus", () => setTimeout(() => { focoDeVolta = false; }, 300));
+// Qualquer clique/tecla do usuário é interação de verdade: libera na hora,
+// sem esperar os 300ms (o listener é de captura p/ rodar antes do focus).
+["pointerdown", "keydown"].forEach((ev) =>
+  document.addEventListener(ev, () => { focoDeVolta = false; }, true)
+);
+
+cInput.addEventListener("focus", () => { if (!focoDeVolta) abrirLista(); });
 cInput.addEventListener("mousedown", () => {
   if (document.activeElement === cInput) setTimeout(abrirLista, 0);
 });
 cInput.addEventListener("input", () => {
+  if (state.origem) limparArquivo();
   state.origem = null; renderLista(cInput.value); atualizarPassos();
 });
 cInput.addEventListener("blur", () => setTimeout(() => (cList.hidden = true), 150));
@@ -97,6 +113,24 @@ cInput.addEventListener("keydown", (e) => {
 /* ---------- arquivo (clique + arrastar) ---------- */
 const dz = $("dropzone");
 const fileInput = $("pdf-input");
+
+// Se o PDF for solto fora da caixa (ex.: em cima do campo Origem), o
+// navegador tenta "colar" o arquivo ali por padrão — isso disparava o
+// evento "input" do combobox e reabria a etapa 1. Bloqueia em toda a
+// página; só a própria caixa de arquivo aceita o drop.
+["dragenter", "dragover", "drop"].forEach((ev) =>
+  window.addEventListener(ev, (e) => { if (!dz.contains(e.target)) e.preventDefault(); })
+);
+
+function limparArquivo() {
+  if (!state.file) return;
+  state.file = null;
+  fileInput.value = "";
+  dz.classList.remove("tem-arquivo");
+  $("dz-text").innerHTML = '<strong>Clique para escolher</strong> ou arraste o PDF aqui';
+  $("result-card").hidden = true;
+  state.ultimo = null;
+}
 
 function setFile(f) {
   if (!f) return;
