@@ -167,9 +167,9 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | WIN-13 | P1: Publicação por tag | Design | Pending |
 | WIN-14 | P1: Publicação por tag | Design | Pending |
 | WIN-15 | P1: Publicação por tag | Design | Pending |
-| WIN-16 | P1: Dependências travadas | Design | Pending |
-| WIN-17 | P1: Dependências travadas | Design | Pending |
-| WIN-18 | P1: Dependências travadas | Design | Pending |
+| WIN-16 | P1: Dependências travadas | T1 | Implementing |
+| WIN-17 | P1: Dependências travadas | T1 | Implementing |
+| WIN-18 | P1: Dependências travadas | T1 | Implementing |
 | WIN-19 | P2: Versão e docs | Design | Pending |
 | WIN-20 | P2: Versão e docs | Design | Pending |
 | WIN-21 | P2: Versão e docs | Design | Pending |

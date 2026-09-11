@@ -1,0 +1,2 @@
+# Testes (tests/). Roda no Python do host - NAO vai para a pasta portatil.
+pytest==9.1.1

@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/build-windows/design.md`
-**Status**: Draft
+**Status**: In Progress
 
 ---
 
@@ -80,10 +80,10 @@ T7 → T8
 
 **Done when**:
 
-- [ ] Lock gerado com `uv pip compile requirements-desktop.txt --python-platform x86_64-pc-windows-msvc --python-version 3.12 --generate-hashes -o requirements-windows.lock`
-- [ ] `tests/test_lock.py`: todo pacote de `requirements-desktop.txt`/`requirements-base.txt` está no lock (WIN-17); toda linha de pacote tem `==` e ao menos um `--hash=sha256:` (WIN-16); o cabeçalho traz o comando de regeneração com `--python-platform x86_64-pc-windows-msvc`, `--python-version 3.12` e `--generate-hashes` (WIN-18); `pywebview`/`pythonnet` presentes e `pyobjc` ausente (lock é de Windows)
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
-- [ ] Test count: 4 tests pass
+- [x] Lock gerado com `uv pip compile requirements-desktop.txt --python-platform x86_64-pc-windows-msvc --python-version 3.12 --generate-hashes -o requirements-windows.lock`
+- [x] `tests/test_lock.py`: todo pacote de `requirements-desktop.txt`/`requirements-base.txt` está no lock (WIN-17); toda linha de pacote tem `==` e ao menos um `--hash=sha256:` (WIN-16); o cabeçalho traz o comando de regeneração com `--python-platform x86_64-pc-windows-msvc`, `--python-version 3.12` e `--generate-hashes` (WIN-18); `pywebview`/`pythonnet` presentes e `pyobjc` ausente (lock é de Windows)
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
+- [x] Test count: 4 tests pass
 
 **Tests**: unit
 **Gate**: quick
