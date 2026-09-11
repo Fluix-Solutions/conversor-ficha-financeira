@@ -213,12 +213,12 @@ T7 → T8
 
 **Done when**:
 
-- [ ] `test_ficha_escaneada`: layout `OCR`, ano 2020, os 12 valores de cada rubrica batem (nome comparado sem diferenciar maiúsculas), nenhum aviso com `CONFERIR` (WIN-06)
-- [ ] `test_importa_tudo`: o alvo importa `pdfplumber, openpyxl, pymupdf, flask, webview, cv2, onnxruntime, rapidocr_onnxruntime, converter, server` e também `clr` quando o alvo é Windows (WIN-04)
-- [ ] `test_api_versao`: `server.py` sobe no alvo numa porta livre e `GET /api/versao` devolve `"ocr": true` (WIN-07)
-- [ ] `test_sem_pdf_real`: `git ls-files` não lista nenhum `.pdf` (WIN-09)
-- [ ] Gate check passes (fim de fase): `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py`
-- [ ] Test count: 26 + 4 = 30 tests pass
+- [x] `test_ficha_escaneada`: layout `OCR`, ano 2020, os 12 valores de cada rubrica batem (nome comparado sem diferenciar maiúsculas), nenhum aviso com `CONFERIR` (WIN-06)
+- [x] `test_importa_tudo`: o alvo importa `pdfplumber, openpyxl, pymupdf, flask, webview, cv2, onnxruntime, rapidocr_onnxruntime, converter, server` e também `clr` quando o alvo é Windows (WIN-04)
+- [x] `test_api_versao`: `server.py` sobe no alvo numa porta livre e `GET /api/versao` devolve `"ocr": true` (WIN-07)
+- [x] `test_sem_pdf_real`: `git ls-files` não lista nenhum `.pdf` (WIN-09)
+- [x] Gate check passes (fim de fase): `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py`
+- [x] Test count: 26 + 4 = 30 tests pass
 
 **Tests**: e2e
 **Gate**: build

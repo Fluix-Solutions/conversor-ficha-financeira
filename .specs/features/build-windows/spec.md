@@ -155,12 +155,12 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | WIN-01 | P1: Build verificado | Design | Pending |
 | WIN-02 | P1: Build verificado | Design | Pending |
 | WIN-03 | P1: Build verificado | T3 | Implementing |
-| WIN-04 | P1: Build verificado | Design | Pending |
+| WIN-04 | P1: Build verificado | T6 | Implementing |
 | WIN-05 | P1: Build verificado | T5 | Implementing |
-| WIN-06 | P1: Build verificado | Design | Pending |
-| WIN-07 | P1: Build verificado | Design | Pending |
+| WIN-06 | P1: Build verificado | T6 | Implementing |
+| WIN-07 | P1: Build verificado | T6 | Implementing |
 | WIN-08 | P1: Build verificado | Design | Pending |
-| WIN-09 | P1: Build verificado | T5 | Implementing |
+| WIN-09 | P1: Build verificado | T5, T6 | Implementing |
 | WIN-10 | P1: Build verificado | T4 | Implementing |
 | WIN-11 | P1: Publicação por tag | T2 | Implementing |
 | WIN-12 | P1: Publicação por tag | T4 | Implementing |
