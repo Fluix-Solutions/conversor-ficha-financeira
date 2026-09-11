@@ -107,6 +107,24 @@ Motivo de existir: OCR local leva ~72 s; no Railway (3 vCPU) leva ~14 min.
 
 `Conversor.bat` aponta para cá. `app_web.py` + `ui/` = janela antiga, reserva.
 
+## Pasta portátil (`construir_portatil.py`) — 2026-09-11
+
+Distribuição para outras máquinas. Baixa o **Python embeddable** (assinado
+pela PSF → passa pelo Smart App Control, que barra .exe do PyInstaller),
+instala `requirements-desktop.txt` dentro, copia `converter.py`/`server.py`/
+`app_desktop.py`/`web/` e gera `Conversor.bat` + `LEIA-ME.txt`. ~360 MB.
+
+**Duas armadilhas do Python embeddable, ambas pegas só ao testar com o Python
+DA PASTA (com o do sistema tudo passa):**
+1. `requirements-desktop.txt` não tinha **flask** — o `app_desktop.py`
+   reaproveita o `server.py`, então o desktop também precisa dele.
+2. Com um `._pth` presente o Python entra em **modo isolado e não põe a pasta
+   do script no `sys.path`** → `import converter` falhava. O build acrescenta
+   `..` ao `._pth` (que é relativo ao diretório do `python.exe`).
+
+Por isso o passo 6/6 roda o Python da pasta, importa tudo, confere
+`ocr_status()` e **falha o build** se algo não carregar.
+
 ## Empacotamento (.exe) — ABANDONADO (2026-09-09)
 
 Caminho do `.exe` descartado: a máquina do usuário tem **Smart App Control em

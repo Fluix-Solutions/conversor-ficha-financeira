@@ -105,6 +105,31 @@ verba são **somados**.
 - No layout B, rubricas pagas em poucos meses são posicionadas pela coordenada
   do número no PDF; convém conferir os meses parciais nas primeiras fichas.
 
+## Levar para outros computadores (pasta portátil)
+
+```bash
+python construir_portatil.py
+```
+
+Gera `portatil/Conversor de Ficha Financeira/` (~360 MB) com um **Python
+embutido** e todas as dependências dentro. Copie a pasta para a outra máquina
+(pendrive, rede, OneDrive) e dê **duplo clique em `Conversor.bat`** — não se
+instala nada, e funciona sem internet, com OCR em velocidade plena (~73 s por
+ficha escaneada).
+
+Por que não um `.exe`: um executável do PyInstaller não é assinado, e o
+Windows com **Smart App Control** o bloqueia — foi o que inviabilizou esse
+caminho aqui. O `python.exe` embutido é assinado pela Python Software
+Foundation e passa.
+
+Requisitos na máquina de destino (já presentes num Windows 10/11 atualizado):
+.NET Framework 4.7.2+ e o WebView2 Runtime (vem com o Edge).
+
+> O build **confere a pasta gerada rodando o Python dela** e falha se algo não
+> importar. Isso não é zelo excessivo: na primeira versão faltava o `flask`, e
+> na segunda o Python embutido não enxergava `converter.py` — nenhum dos dois
+> aparece se você testar com o Python do sistema.
+
 ## Versão web (rodar online)
 
 `server.py` é um servidor Flask que serve a mesma interface (pasta `web/`).

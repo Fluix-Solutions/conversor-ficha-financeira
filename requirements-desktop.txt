@@ -2,6 +2,11 @@
 -r requirements-base.txt
 pywebview>=6.0
 
+# Flask: o app_desktop.py reaproveita o server.py (sobe numa porta local em
+# vez de duplicar a interface), entao o desktop tambem precisa dele.
+# gunicorn NAO entra - so o servidor de desenvolvimento do Flask e usado aqui.
+flask>=3.0
+
 # OCR - converte fichas ESCANEADAS (Serra e Estado) e lê os NOMES das rubricas
 # no layout C quando o código não está em RUBRICAS_C.
 # Nota: o rapidocr puxa `opencv-python` (build com GUI). No desktop tudo bem;

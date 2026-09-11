@@ -9,3 +9,7 @@ __pycache__/
 PDF/
 *.pdf
 *.png
+
+# Pasta portatil gerada por construir_portatil.py (centenas de MB)
+portatil/
+*.zip
