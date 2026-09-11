@@ -171,10 +171,10 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | WIN-17 | P1: Dependências travadas | T1 | Implementing |
 | WIN-18 | P1: Dependências travadas | T1 | Implementing |
 | WIN-19 | P2: Versão e docs | T2 | Implementing |
-| WIN-20 | P2: Versão e docs | Design | Pending |
-| WIN-21 | P2: Versão e docs | Design | Pending |
+| WIN-20 | P2: Versão e docs | T8 | Implementing |
+| WIN-21 | P2: Versão e docs | T8 | Implementing |
 
-**Coverage:** 21 total, 0 mapped to tasks, 21 unmapped ⚠️ (tasks ainda não criadas)
+**Coverage:** 21 total, 21 mapped to tasks, 0 unmapped
 
 ---
 

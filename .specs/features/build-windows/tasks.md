@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/build-windows/design.md`
-**Status**: In Progress
+**Status**: Done (aguardando gate CI e Verifier)
 
 ---
 
@@ -269,9 +269,9 @@ T7 → T8
 
 **Done when**:
 
-- [ ] README: gerar versão a partir do Mac (tag e botão manual → Release), atualizar o lock (comando do cabeçalho), subir `VERSAO` antes de cada Release (WIN-20)
-- [ ] CLAUDE.md: fluxo de build no Actions, repo `Fluix-Solutions/conversor-ficha-financeira`, `pip --platform` não resolve Windows no Mac, Python preso na 3.12, SHA-256 fixo do embed (WIN-21)
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [x] README: gerar versão a partir do Mac (tag e botão manual → Release), atualizar o lock (comando do cabeçalho), subir `VERSAO` antes de cada Release (WIN-20)
+- [x] CLAUDE.md: fluxo de build no Actions, repo `Fluix-Solutions/conversor-ficha-financeira`, `pip --platform` não resolve Windows no Mac, Python preso na 3.12, SHA-256 fixo do embed (WIN-21)
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
 
 **Tests**: none
 **Gate**: build

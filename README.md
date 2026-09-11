@@ -107,15 +107,68 @@ verba são **somados**.
 
 ## Levar para outros computadores (pasta portátil)
 
+A versão Windows é uma **pasta portátil** (~360 MB) com um **Python embutido**
+e todas as dependências dentro. Na outra máquina: descompacte o zip e dê
+**duplo clique em `Conversor.bat`** — não se instala nada, e funciona sem
+internet, com OCR em velocidade plena (~73 s por ficha escaneada).
+
+### Gerar uma versão (de qualquer computador, inclusive Mac)
+
+O build roda no **GitHub Actions**, num Windows de verdade
+(`.github/workflows/windows.yml`), e publica o zip como **Release**:
+
+1. Suba o `VERSAO` em `server.py` (ex.: `"1.2"`). A tag **tem** que ser igual,
+   senão o build falha logo no início mostrando os dois valores.
+2. Commit, push, e então **um** dos dois:
+   - `git tag v1.2 && git push origin v1.2`, ou
+   - no GitHub, **Actions → Windows (pasta portátil) → Run workflow**
+     (cria a tag `v<VERSAO>` sozinho no commit escolhido).
+3. Em ~15-30 min aparece a Release `v1.2` com
+   `Conversor-de-Ficha-Financeira-v1.2-windows-x64.zip` e o SHA-256 nas notas.
+
+O que o workflow faz, e por que dá para confiar no zip:
+
+- confere o **SHA-256 do Python embutido** baixado do python.org;
+- instala as dependências só de `requirements-windows.lock`, com **versão
+  exata e hash** de cada pacote (`pip --require-hashes`);
+- roda os testes (`tests/`) **com o Python da própria pasta**: importa tudo,
+  converte uma ficha **fictícia** de texto e a mesma ficha escaneada (OCR),
+  confere os valores e sobe o `server.py` para ver `"ocr": true`;
+- só publica se tudo passar. Uma Release que já existe **nunca** é
+  sobrescrita — para publicar de novo, suba o `VERSAO`.
+
+Antes de mandar a primeira versão a alguém, teste o zip **baixado da Release**
+numa máquina com Smart App Control ligado.
+
+### Atualizar as dependências da pasta
+
+As versões ficam travadas em `requirements-windows.lock`. Para atualizar (por
+exemplo, depois de mudar `requirements-desktop.txt`), rode no Mac o comando
+que está no cabeçalho do próprio lock:
+
 ```bash
-python construir_portatil.py
+uv pip compile requirements-desktop.txt --python-platform x86_64-pc-windows-msvc \
+  --python-version 3.12 --generate-hashes -o requirements-windows.lock
 ```
 
-Gera `portatil/Conversor de Ficha Financeira/` (~360 MB) com um **Python
-embutido** e todas as dependências dentro. Copie a pasta para a outra máquina
-(pendrive, rede, OneDrive) e dê **duplo clique em `Conversor.bat`** — não se
-instala nada, e funciona sem internet, com OCR em velocidade plena (~73 s por
-ficha escaneada).
+Com o lock existente, o `uv` mantém as versões já travadas; para subir um
+pacote, acrescente `--upgrade-package <nome>`. Não use `pip --platform` no Mac:
+ele avalia as condições de plataforma do Mac e puxa `pyobjc` em vez do
+`pythonnet` do Windows.
+
+### Rodar os testes
+
+```bash
+uv venv -p 3.12 .venv
+uv pip install -p .venv -r requirements-desktop.txt -r requirements-dev.txt
+.venv/bin/python -m pytest tests
+```
+
+### Gerar a pasta num Windows, sem o GitHub
+
+```bash
+python construir_portatil.py [destino] [--zip arquivo.zip]
+```
 
 Por que não um `.exe`: um executável do PyInstaller não é assinado, e o
 Windows com **Smart App Control** o bloqueia — foi o que inviabilizou esse
@@ -205,3 +258,8 @@ Arquivos de deploy: `Dockerfile` (o que o Railway usa), `.dockerignore`,
 | `requirements.txt` | Deploy web (engine + Flask) |
 | `requirements-desktop.txt` | App de janela (engine + pywebview) |
 | `requirements-base.txt` | Só o motor (`pdfplumber`, `openpyxl`, `pymupdf`) |
+| `construir_portatil.py` | Monta a pasta portátil do Windows (e o zip) |
+| `requirements-windows.lock` | Versões exatas + hashes da pasta portátil |
+| `release.py` | Regras da Release (tag × `VERSAO`, nome do zip, notas) |
+| `.github/workflows/windows.yml` | Build, testes e Release no GitHub Actions |
+| `tests/` + `requirements-dev.txt` | Testes (`pytest`), com fichas fictícias |
