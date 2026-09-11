@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/build-windows/design.md`
-**Status**: Done (aguardando gate CI e Verifier)
+**Status**: In Progress (correções do Verifier)
 
 ---
 
@@ -59,6 +59,12 @@ T5 → T6
 
 ```
 T7 → T8
+```
+
+### Phase 4: Correções do Verifier (validation.md, 1ª rodada: FAIL)
+
+```
+T9 → T10 → T11 → T12
 ```
 
 ---
@@ -277,6 +283,115 @@ T7 → T8
 **Gate**: build
 
 **Commit**: `docs(windows): document the actions build, lock refresh and release flow`
+
+---
+
+### T9: Teste do `main` inteiro do build
+
+**What**: Teste que roda `construir_portatil.main()` com rede e subprocessos simulados e confere o comando de instalação executado, o registro do `--zip` e os itens da pasta; `--python-alvo` passa a ser resolvido para caminho absoluto.
+**Where**: `tests/test_construir.py`
+**Depends on**: None
+**Reuses**: `construir_portatil.py:main`
+**Requirement**: WIN-02, WIN-10, WIN-16 (mutantes M5 e M6 do Verifier)
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] O comando de instalação que o `main` executa contém `--require-hashes` e `-r requirements-windows.lock`, e nenhum `requirements-desktop.txt` (mata M5)
+- [x] Com `--zip`, a saída traz o SHA-256 real do zip gerado e a lista de pacotes (mata M6)
+- [x] A pasta montada tem `converter.py`, `server.py`, `app_desktop.py`, `web/index.html`, `Conversor.bat` e `LEIA-ME.txt`, e o zip tem a raiz `Conversor de Ficha Financeira/` (WIN-02)
+- [x] `tests/conftest.py`: `alvo` usa `.resolve()`
+- [x] Mutantes M5 e M6 reaplicados num worktree descartável são mortos
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
+- [x] Test count: 30 + 1 = 31 tests pass
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `test(windows): cover the build main flow, install command and zip log`
+
+---
+
+### T10: Tag já existente em outro commit
+
+**What**: `release.py` falha quando a tag da Release já existe apontando para outro commit (`--sha-tag`, `--sha` no CLI `tag`).
+**Where**: `release.py`
+**Depends on**: T9
+**Reuses**: `release.py:tag_release`
+**Requirement**: WIN-23 (gap WIN-01 do Verifier)
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] `tests/test_release.py`: tag existente em outro commit → `ErroRelease` com os dois SHAs; mesmo commit → aceita; tag inexistente (SHA vazio) → aceita; CLI `tag --sha-tag X --sha Y` com X ≠ Y sai com 1
+- [ ] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
+- [ ] Test count: 31 + 4 = 35 tests pass
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(release): refuse a release tag that points to another commit`
+
+---
+
+### T11: Opção `publicar` e checagem da tag no workflow
+
+**What**: `workflow_dispatch` ganha o input booleano `publicar` (padrão `true`); o job `release` só roda quando é tag ou `publicar`; o passo da tag consulta o commit da tag existente e passa a `release.py`.
+**Where**: `.github/workflows/windows.yml`
+**Depends on**: T10
+**Reuses**: `release.py tag --sha-tag --sha`
+**Requirement**: WIN-01, WIN-22, WIN-23
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] `workflow_dispatch.inputs.publicar` booleano, padrão `true`
+- [ ] Job `release` com `if: github.event_name == 'push' || inputs.publicar`
+- [ ] Passo da tag: `gh api repos/<repo>/commits/<tag>` (vazio se não existir) → `release.py tag ... --sha-tag --sha "$GITHUB_SHA"`
+- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+
+**Tests**: none
+**Gate**: build
+
+**Commit**: `ci(windows): add publicar switch and stale-tag check to the workflow`
+
+---
+
+### T12: Documentação do disparo sem publicar
+
+**What**: README explica testar sem publicar (`publicar` desmarcado / `gh workflow run -f publicar=false`); CLAUDE.md deixa de afirmar que o OCR já passou no Windows e registra a opção e a checagem de tag.
+**Where**: `README.md`
+**Depends on**: T11
+**Reuses**: seções escritas na T8
+**Requirement**: WIN-20, WIN-21
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] README: passo a passo de "testar sem publicar" e de baixar o zip do artefato
+- [ ] CLAUDE.md: frase sobre OCR no Windows corrigida; `publicar` e tag×commit documentados
+- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+
+**Tests**: none
+**Gate**: build
+
+**Commit**: `docs(windows): document test runs without publishing`
 
 ---
 

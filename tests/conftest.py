@@ -34,7 +34,7 @@ def pytest_configure(config):
 
 @pytest.fixture(scope="session")
 def alvo(request) -> Path:
-    return Path(request.config.getoption("--python-alvo"))
+    return Path(request.config.getoption("--python-alvo")).resolve()
 
 
 @pytest.fixture(scope="session")

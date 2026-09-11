@@ -5,6 +5,7 @@ import hashlib
 import sys
 import zipfile
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -81,6 +82,55 @@ def test_registro_mostra_tamanho_e_sha256_do_zip(tmp_path, capsys):
     saida = capsys.readouterr().out
     assert hashlib.sha256(b"a" * 2_500_000).hexdigest() in saida
     assert "2.5 MB" in saida
+
+
+def test_main_monta_instala_do_lock_e_registra_o_zip(tmp_path, monkeypatch, capsys):
+    """`main` inteiro com rede e subprocessos simulados: o que ele EXECUTA."""
+    embed = tmp_path / "embed.zip"
+    with zipfile.ZipFile(embed, "w") as z:
+        z.writestr("python.exe", "MZ")
+        z.writestr("python312._pth", "python312.zip\n.\n\n#import site\n")
+    monkeypatch.setattr(cp, "SHA256_EMBED",
+                        hashlib.sha256(embed.read_bytes()).hexdigest())
+
+    def baixar(url, destino):
+        destino.write_bytes(embed.read_bytes() if url == cp.URL_EMBED else b"# get-pip")
+
+    chamadas = []
+
+    def run(cmd, *a, **k):
+        chamadas.append([str(c) for c in cmd])
+        return SimpleNamespace(returncode=0, stdout="pacote-falso==1.0\n")
+
+    monkeypatch.setattr(cp, "_baixar", baixar)
+    monkeypatch.setattr(cp.subprocess, "run", run)
+    arq_zip = tmp_path / "saida.zip"
+    monkeypatch.setattr(sys, "argv", ["construir_portatil.py",
+                                      str(tmp_path / "saida"), "--zip", str(arq_zip)])
+
+    assert cp.main() == 0
+
+    # WIN-16: a instalação que o main executa é a do lock, com hash.
+    instalar = [c for c in chamadas if "install" in c]
+    assert len(instalar) == 1
+    assert "--require-hashes" in instalar[0]
+    assert Path(instalar[0][instalar[0].index("-r") + 1]) == cp.LOCK
+    assert not any("requirements-desktop.txt" in arg for c in chamadas for arg in c)
+
+    # WIN-02: a pasta tem o app, a interface e o lançador.
+    alvo = tmp_path / "saida" / cp.NOME
+    for item in ["converter.py", "server.py", "app_desktop.py", "web/index.html",
+                 "Conversor.bat", "LEIA-ME.txt", "python/python.exe"]:
+        assert (alvo / item).is_file(), item
+    assert "..\n" in (alvo / "python" / "python312._pth").read_text()
+
+    # WIN-12 + WIN-10: zip com a pasta raiz e registro no log.
+    nomes = zipfile.ZipFile(arq_zip).namelist()
+    assert "Conversor de Ficha Financeira/Conversor.bat" in nomes
+    assert all(n.startswith("Conversor de Ficha Financeira/") for n in nomes)
+    saida = capsys.readouterr().out
+    assert f"sha256: {hashlib.sha256(arq_zip.read_bytes()).hexdigest()}" in saida
+    assert "pacote-falso==1.0" in saida
 
 
 def test_main_para_antes_de_extrair_se_o_hash_nao_bate(tmp_path, monkeypatch):
