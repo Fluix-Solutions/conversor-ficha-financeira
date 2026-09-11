@@ -2,7 +2,9 @@
 # Python DA PASTA e publica o zip como GitHub Release.
 #
 #   - tag vX.Y / vX.Y.Z  -> Release com essa tag (tem que bater com server.VERSAO)
-#   - "Run workflow"     -> Release v<server.VERSAO> no commit escolhido
+#   - "Run workflow"     -> Release v<server.VERSAO> no commit escolhido;
+#                           com "publicar" desmarcado, só testa e deixa o zip
+#                           como artefato (14 dias), sem tag nem Release
 #
 # Nada é publicado se qualquer passo falhar. Release existente nunca é
 # sobrescrita: para republicar, suba o VERSAO.
@@ -14,6 +16,11 @@ on:
       - "v[0-9]+.[0-9]+"
       - "v[0-9]+.[0-9]+.[0-9]+"
   workflow_dispatch:
+    inputs:
+      publicar:
+        description: "Publicar a Release v<VERSAO> (desmarque para só testar)"
+        type: boolean
+        default: true
 
 concurrency:
   group: windows-${{ github.ref }}
@@ -45,17 +52,26 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Tag da Release (confere com server.VERSAO)
+      - name: Tag da Release (confere com server.VERSAO e com o commit)
         id: tag
         env:
           REF_TYPE: ${{ github.ref_type }}
           REF_NAME: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
         run: |
-          if [ "$REF_TYPE" = "tag" ]; then
-            TAG=$(python release.py tag --ref-tag "$REF_NAME")
+          ARGS=()
+          if [ "$REF_TYPE" = "tag" ]; then ARGS=(--ref-tag "$REF_NAME"); fi
+          TAG=$(python release.py tag "${ARGS[@]}")
+          # Tag já existente num commit antigo prenderia a Release a ele.
+          # Se a tag não existe, o gh sai com erro e põe o JSON do erro no
+          # stdout — por isso o teste do código de saída, e não `|| true`.
+          if SHA_TAG=$(gh api "repos/$GH_REPO/commits/$TAG" --jq .sha 2>/dev/null); then
+            :
           else
-            TAG=$(python release.py tag)
+            SHA_TAG=""
           fi
+          python release.py tag "${ARGS[@]}" --sha-tag "$SHA_TAG" --sha "$GITHUB_SHA"
           ZIP=$(python -c "import release, sys; print(release.nome_zip(sys.argv[1]))" "$TAG")
           echo "tag=$TAG" >> "$GITHUB_OUTPUT"
           echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
@@ -84,6 +100,8 @@ jobs:
 
   release:
     needs: build
+    # Tag enviada sempre publica; no botão manual, só com "publicar" marcado.
+    if: github.event_name == 'push' || inputs.publicar
     runs-on: ubuntu-latest
     timeout-minutes: 15
     permissions:

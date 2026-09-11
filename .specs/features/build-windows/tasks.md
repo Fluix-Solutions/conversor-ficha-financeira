@@ -357,10 +357,10 @@ T9 → T10 → T11 → T12
 
 **Done when**:
 
-- [ ] `workflow_dispatch.inputs.publicar` booleano, padrão `true`
-- [ ] Job `release` com `if: github.event_name == 'push' || inputs.publicar`
-- [ ] Passo da tag: `gh api repos/<repo>/commits/<tag>` (vazio se não existir) → `release.py tag ... --sha-tag --sha "$GITHUB_SHA"`
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [x] `workflow_dispatch.inputs.publicar` booleano, padrão `true`
+- [x] Job `release` com `if: github.event_name == 'push' || inputs.publicar`
+- [x] Passo da tag: `gh api repos/<repo>/commits/<tag>` (vazio se não existir — testando o código de saída: com tag inexistente o `gh` põe o JSON do erro no stdout) → `release.py tag ... --sha-tag --sha "$GITHUB_SHA"`
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
 
 **Tests**: none
 **Gate**: build
