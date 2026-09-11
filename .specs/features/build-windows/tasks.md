@@ -242,10 +242,10 @@ T7 → T8
 
 **Done when**:
 
-- [ ] Gatilhos: tags `v[0-9]+.[0-9]+` e `v[0-9]+.[0-9]+.[0-9]+` + `workflow_dispatch`; `concurrency` por ref sem cancelar
-- [ ] `build` (`windows-latest`, `contents: read`): `release.py tag` → pytest unit → `construir_portatil.py` → pytest e2e com `--python-alvo` da pasta → `--zip` → `upload-artifact@v7` (`archive: false`, 14 dias)
-- [ ] `release` (`ubuntu-latest`, `needs: build`, `contents: write`): baixa o zip, falha se `gh release view <tag>` achar Release (WIN-14), senão `gh release create <tag> <zip> --target <sha> --notes-file` com `release.py notas`
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [x] Gatilhos: tags `v[0-9]+.[0-9]+` e `v[0-9]+.[0-9]+.[0-9]+` + `workflow_dispatch`; `concurrency` por ref sem cancelar
+- [x] `build` (`windows-latest`, `contents: read`): `release.py tag` → pytest unit → `construir_portatil.py` → pytest e2e com `--python-alvo` da pasta → `--zip` → `upload-artifact@v7` (`archive: false`, 14 dias)
+- [x] `release` (`ubuntu-latest`, `needs: build`, `contents: write`): baixa o zip (`skip-decompress: true`, senão a action extrai o .zip), falha se `gh release view <tag>` achar Release (WIN-14), senão `gh release create <tag> <zip> --target <sha> --notes-file` com `release.py notas`
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
 
 **Tests**: none
 **Gate**: build

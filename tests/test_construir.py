@@ -68,8 +68,10 @@ def test_registro_lista_pacotes_com_versao(tmp_path, capsys):
     z.write_bytes(b"zip")
     cp.registrar(Path(sys.executable), z)
     saida = capsys.readouterr().out
-    assert "pytest==9.1.1" in saida
-    assert "openpyxl==3.1.5" in saida
+    # pytest e pluggy existem em qualquer Python que rode esta suíte (Mac ou CI).
+    from importlib.metadata import version
+    assert f"pytest=={version('pytest')}" in saida.splitlines()
+    assert f"pluggy=={version('pluggy')}" in saida.splitlines()
 
 
 def test_registro_mostra_tamanho_e_sha256_do_zip(tmp_path, capsys):
