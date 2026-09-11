@@ -498,10 +498,10 @@ T15 → T16
 
 **Done when**:
 
-- [ ] CLAUDE.md: frase "No Windows, só depois do 1º run" substituída pelo resultado do run 34632113906; gatilho de PR; tag×commit só ao publicar
-- [ ] README: PR testa no Windows; "Run workflow" só após o workflow estar na `main`
-- [ ] design.md: seção com as correções T9-T16
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [x] CLAUDE.md: frase "No Windows, só depois do 1º run" substituída pelo resultado do run 34632113906; gatilho de PR; tag×commit só ao publicar
+- [x] README: PR testa no Windows; "Run workflow" só após o workflow estar na `main`
+- [x] design.md: seção com as correções T9-T16
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
 
 **Tests**: none
 **Gate**: build

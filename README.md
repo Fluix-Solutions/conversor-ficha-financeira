@@ -133,9 +133,14 @@ o zip fica como **artefato** da execução por 14 dias (página da execução �
 seção *Artifacts*, ou `gh run download <id>`). É o caminho para testar o zip
 numa máquina com Smart App Control antes de publicar.
 
+**Pull requests** para a `main` que mexem no app, no build ou nos testes
+rodam o mesmo workflow no Windows, só para testar (sem tag nem Release). O
+botão **Run workflow** só aparece depois que o `windows.yml` está na `main`.
+
 Se a tag `v<VERSAO>` já existir apontando para **outro** commit (por exemplo,
 um build anterior que falhou), o workflow para logo no início mostrando os
-dois commits: suba o `VERSAO` ou apague a tag antiga.
+dois commits: suba o `VERSAO` ou apague a tag antiga. (Só em execução que
+publica; teste e PR não checam isso.)
 
 O que o workflow faz, e por que dá para confiar no zip:
 

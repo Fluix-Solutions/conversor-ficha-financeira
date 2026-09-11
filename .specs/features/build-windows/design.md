@@ -173,3 +173,19 @@ A rubrica de Descontos (`0500 IMPOSTO`) está na ficha e **não** pode aparecer 
 | Publicação em job separado | `release` em Ubuntu com `contents: write` | Menor privilégio para o job que executa código de terceiros (pip) |
 | Leitura da versão | Regex em `server.py` | Importar `server` puxaria Flask e o motor de OCR no runner de Release |
 | Versões das actions | `checkout@v7`, `setup-python@v7`, `upload-artifact@v7`, `download-artifact@v8` | Últimas publicadas (consultado em 2026-09-11 via API do GitHub) |
+
+---
+
+## Correções depois da verificação (T9-T16)
+
+| Origem | Correção | Onde |
+| ------ | -------- | ---- |
+| Verifier 1: mutantes M5/M6 sobreviveram | Teste do `main` inteiro (rede e subprocessos simulados) | `tests/test_construir.py` |
+| Verifier 1: tag antiga no disparo manual | `release.py tag --sha-tag --sha` falha se a tag existe noutro commit | `release.py`, workflow |
+| Verifier 1: não havia como testar sem publicar | Input `publicar` (padrão `true`); `release` só roda com tag ou `publicar` | workflow |
+| `workflow_dispatch` exige o workflow na `main` | Gatilho `pull_request` (com `paths`) para testar antes do merge | workflow |
+| 1º run no CI: `proxy-tools` só tem sdist e o Python embutido ignora `PYTHONPATH` | `setuptools` no lock (`requirements-build-windows.txt`), instalado antes; resto com `--no-build-isolation` | `construir_portatil.py`, lock |
+| Verifier 2 (G1): checagem da tag quebraria PRs depois da 1ª Release | Checagem só em execução que publica (`PUBLICA`) | workflow |
+| `.resolve()` no `--python-alvo` caía no Python do sistema | `.absolute()` | `tests/conftest.py` |
+
+O diagrama acima continua valendo; o passo da tag só consulta o commit da tag quando a execução publica.

@@ -144,7 +144,13 @@ roda (ele executa o `python.exe` da pasta). O build oficial é
   build + testes no Windows, zip só como artefato (14 dias), sem tag nem
   Release — é assim que se testa o workflow sem publicar versão
   (`gh workflow run windows.yml --ref <branch> -f publicar=false`).
-- **Tag já existente em outro commit** faz o build falhar no início: o
+- **PR para a `main`** que mexe no app/build/testes roda o workflow só para
+  testar (job `release` pulado). Foi o jeito do 1º teste: o "Run workflow"
+  (`workflow_dispatch`) **só existe depois que o arquivo está na `main`**
+  (regra do GitHub).
+- **Tag já existente em outro commit** faz o build falhar no início — **só em
+  execução que publica** (tag ou `publicar`; num PR o commit é o de merge e
+  nunca bateria com a tag): o
   `gh release create --target` não move tag existente, e a Release ficaria
   presa ao commit antigo com o zip de outro. Ao consultar a tag, o `gh api`
   com ref inexistente sai com erro **e põe o JSON do erro no stdout** — por
@@ -178,7 +184,8 @@ roda (ele executa o `python.exe` da pasta). O build oficial é
 - **Python preso na 3.12**: `rapidocr-onnxruntime` exige `<3.13`, e 3.12.10 foi
   o último 3.12 com embeddable. Sair disso = migrar para o pacote `rapidocr`.
 - O lock atual traz `opencv-python 5.0.0.93` + `numpy 2.5.3`; os testes de OCR
-  passam com eles no Mac. No Windows, só depois do 1º run do workflow.
+  passam com eles no Mac e no Windows (run 34632113906, 2026-09-11: 5/5 e2e
+  com o `python.exe` da pasta, `platform win32`; zip 153,5 MB).
 - `--python-alvo` vira absoluto com `.absolute()`, **não** `.resolve()`: o
   python de um venv é link simbólico, e segui-lo cai no Python do sistema.
 - Saída de subprocesso no Windows vem na página de código do console e o
