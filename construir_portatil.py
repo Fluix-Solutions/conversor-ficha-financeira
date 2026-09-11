@@ -18,6 +18,7 @@ Requisitos na máquina de destino (presentes num Windows 10/11 atualizado):
 """
 from __future__ import annotations
 
+import hashlib
 import re
 import shutil
 import subprocess
@@ -28,10 +29,18 @@ from pathlib import Path
 
 PY = "3.12.9"
 URL_EMBED = f"https://www.python.org/ftp/python/{PY}/python-{PY}-embed-amd64.zip"
+# SHA-256 do python-3.12.9-embed-amd64.zip oficial (o MD5 bate com o que o
+# python.org publica). O zip vira binário distribuído a terceiros: se o
+# download vier diferente, o build para antes de extrair. Trocar o PY exige
+# trocar este hash.
+SHA256_EMBED = "615861fb801e8b04c847598db4e1e46e4b046295017caa37cb5486dde72b5865"
 URL_GETPIP = "https://bootstrap.pypa.io/get-pip.py"
 
 RAIZ = Path(__file__).resolve().parent
 NOME = "Conversor de Ficha Financeira"
+# Versões exatas + hashes das dependências (win_amd64/cp312). Para atualizar,
+# rode no Mac o comando que está no cabeçalho do próprio arquivo.
+LOCK = RAIZ / "requirements-windows.lock"
 
 # O que roda na máquina de destino. `ui/` e `app_web.py` (janela antiga) e o
 # `app.py` (Tkinter, que o Python embutido nem tem) ficam de fora.
@@ -75,6 +84,22 @@ def _baixar(url: str, destino: Path) -> None:
         shutil.copyfileobj(r, f)
 
 
+def conferir_sha256(arquivo: Path, esperado: str) -> None:
+    real = hashlib.sha256(arquivo.read_bytes()).hexdigest()
+    if real != esperado:
+        raise RuntimeError(
+            f"SHA-256 de {arquivo.name} nao confere: veio {real}, esperado "
+            f"{esperado}. Apague {arquivo} e rode de novo; se repetir, o "
+            f"download nao e o oficial."
+        )
+
+
+def comando_instalar(python_exe: Path) -> list[str]:
+    """pip do Python da pasta instalando só o que está no lock, com hash."""
+    return [str(python_exe), "-m", "pip", "install", "--no-warn-script-location",
+            "--require-hashes", "-r", str(LOCK)]
+
+
 def main() -> int:
     saida = Path(sys.argv[1]) if len(sys.argv) > 1 else RAIZ / "portatil"
     alvo = saida / NOME
@@ -93,6 +118,7 @@ def main() -> int:
     z = tmp / "python-embed.zip"
     if not z.exists():
         _baixar(URL_EMBED, z)
+    conferir_sha256(z, SHA256_EMBED)
     with zipfile.ZipFile(z) as zf:
         zf.extractall(pydir)
 
@@ -126,11 +152,7 @@ def main() -> int:
 
     # 3. dependências
     print("3/5 dependencias (demora — sao ~400 MB)")
-    subprocess.run(
-        [str(pydir / "python.exe"), "-m", "pip", "install",
-         "--no-warn-script-location", "-r", str(RAIZ / "requirements-desktop.txt")],
-        check=True,
-    )
+    subprocess.run(comando_instalar(pydir / "python.exe"), check=True)
 
     # 4. aplicação
     print("4/5 aplicacao")
@@ -155,7 +177,7 @@ def main() -> int:
     print("6/6 conferindo a pasta gerada")
     codigo = """
 import sys
-mods = ['pdfplumber', 'openpyxl', 'fitz', 'flask', 'webview', 'cv2',
+mods = ['pdfplumber', 'openpyxl', 'pymupdf', 'flask', 'webview', 'cv2',
         'onnxruntime', 'rapidocr_onnxruntime', 'clr', 'converter', 'server']
 ruins = []
 for m in mods:

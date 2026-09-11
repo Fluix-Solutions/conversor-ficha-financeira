@@ -133,10 +133,10 @@ T7 → T8
 
 **Done when**:
 
-- [ ] `tests/test_construir.py`: `conferir_sha256` aceita arquivo com o hash certo; com hash diferente levanta `RuntimeError` citando os dois hashes (WIN-03); `SHA256_EMBED` é o SHA-256 do `python-3.12.9-embed-amd64.zip` (`615861fb…5865`); o comando de instalação montado usa `--require-hashes` e `-r requirements-windows.lock` (WIN-16)
-- [ ] `main` chama `conferir_sha256` antes do `extractall`
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
-- [ ] Test count: 17 + 4 = 21 tests pass
+- [x] `tests/test_construir.py`: `conferir_sha256` aceita arquivo com o hash certo; com hash diferente levanta `RuntimeError` citando os dois hashes (WIN-03); `SHA256_EMBED` é o SHA-256 do `python-3.12.9-embed-amd64.zip` (`615861fb…5865`); o comando de instalação montado usa `--require-hashes` e `-r requirements-windows.lock` (WIN-16)
+- [x] `main` chama `conferir_sha256` antes do `extractall`
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
+- [x] Test count: 17 + 5 = 22 tests pass (inclui `main` com download adulterado: nada extraído, pip não chamado)
 
 **Tests**: unit
 **Gate**: quick
@@ -162,7 +162,7 @@ T7 → T8
 
 - [ ] `tests/test_construir.py`: `zipar` numa pasta falsa gera zip cujas entradas começam todas por `Conversor de Ficha Financeira/` e contém `Conversor de Ficha Financeira/Conversor.bat` e `.../LEIA-ME.txt` (WIN-12); a função de registro imprime o tamanho e o SHA-256 real do zip (WIN-10)
 - [ ] Gate check passes (fim de fase): `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py`
-- [ ] Test count: 21 + 3 = 24 tests pass
+- [ ] Test count: 22 + 3 = 25 tests pass
 
 **Tests**: unit
 **Gate**: build
@@ -189,7 +189,7 @@ T7 → T8
 - [ ] `tests/test_portatil.py::test_ficha_texto`: convertendo `ficticia.pdf` com origem `estado`, a aba Proventos tem cabeçalho `Ano, Mês, VENCIMENTO, ADICIONAL TEMPO SERVICO, GRATIFICACAO`, 12 linhas de 2020 com os valores exatos esperados, e nenhuma coluna `IMPOSTO` (WIN-05)
 - [ ] O gerador só usa dados inventados (`FULANO DE TAL FICTICIO`) e grava num diretório temporário (WIN-09)
 - [ ] Gate check passes: `.venv/bin/python -m pytest tests -q`
-- [ ] Test count: 24 + 1 = 25 tests pass
+- [ ] Test count: 25 + 1 = 26 tests pass
 
 **Tests**: e2e
 **Gate**: full
@@ -218,7 +218,7 @@ T7 → T8
 - [ ] `test_api_versao`: `server.py` sobe no alvo numa porta livre e `GET /api/versao` devolve `"ocr": true` (WIN-07)
 - [ ] `test_sem_pdf_real`: `git ls-files` não lista nenhum `.pdf` (WIN-09)
 - [ ] Gate check passes (fim de fase): `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py`
-- [ ] Test count: 25 + 4 = 29 tests pass
+- [ ] Test count: 26 + 4 = 30 tests pass
 
 **Tests**: e2e
 **Gate**: build
