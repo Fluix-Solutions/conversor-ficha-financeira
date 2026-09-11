@@ -111,8 +111,11 @@ Motivo de existir: OCR local leva ~72 s; no Railway (3 vCPU) leva ~14 min.
 
 Distribuição para outras máquinas. Baixa o **Python embeddable** (assinado
 pela PSF → passa pelo Smart App Control, que barra .exe do PyInstaller),
-instala `requirements-desktop.txt` dentro, copia `converter.py`/`server.py`/
-`app_desktop.py`/`web/` e gera `Conversor.bat` + `LEIA-ME.txt`. ~360 MB.
+confere o **SHA-256** dele (`SHA256_EMBED`; trocar `PY` exige trocar o hash),
+instala `requirements-windows.lock` dentro com `pip --require-hashes`, copia
+`converter.py`/`server.py`/`app_desktop.py`/`web/` e gera `Conversor.bat` +
+`LEIA-ME.txt`. ~360 MB. `--zip ARQ` gera também o zip e registra pacotes,
+tamanho e SHA-256.
 
 **Duas armadilhas do Python embeddable, ambas pegas só ao testar com o Python
 DA PASTA (com o do sistema tudo passa):**
@@ -124,6 +127,72 @@ DA PASTA (com o do sistema tudo passa):**
 
 Por isso o passo 6/6 roda o Python da pasta, importa tudo, confere
 `ocr_status()` e **falha o build** se algo não carregar.
+
+## Build Windows no GitHub Actions — 2026-09-11
+
+O desenvolvimento passou para um **Mac**, onde o `construir_portatil.py` não
+roda (ele executa o `python.exe` da pasta). O build oficial é
+`.github/workflows/windows.yml` no repo **`Fluix-Solutions/conversor-ficha-financeira`**
+(público → runner Windows gratuito). Spec/design/tarefas em
+`.specs/features/build-windows/`; decisões AD-001/AD-002 em `.specs/STATE.md`.
+
+- **Disparo**: tag `vX.Y`/`vX.Y.Z` **ou** "Run workflow" (cria a tag
+  `v<VERSAO>`). A tag tem que ser igual a `server.VERSAO` (`release.py tag`
+  falha mostrando os dois). Release existente **nunca** é sobrescrita → para
+  republicar, suba o `VERSAO`.
+- **"Run workflow" tem a opção `publicar`** (padrão marcado). Desmarcada =
+  build + testes no Windows, zip só como artefato (14 dias), sem tag nem
+  Release — é assim que se testa o workflow sem publicar versão
+  (`gh workflow run windows.yml --ref <branch> -f publicar=false`).
+- **PR para a `main`** que mexe no app/build/testes roda o workflow só para
+  testar (job `release` pulado). Foi o jeito do 1º teste: o "Run workflow"
+  (`workflow_dispatch`) **só existe depois que o arquivo está na `main`**
+  (regra do GitHub).
+- **Tag já existente em outro commit** faz o build falhar no início — **só em
+  execução que publica** (tag ou `publicar`; num PR o commit é o de merge e
+  nunca bateria com a tag): o
+  `gh release create --target` não move tag existente, e a Release ficaria
+  presa ao commit antigo com o zip de outro. Ao consultar a tag, o `gh api`
+  com ref inexistente sai com erro **e põe o JSON do erro no stdout** — por
+  isso o workflow testa o código de saída, não usa `|| true`.
+- **Job `build`** (`windows-latest`, `contents: read`): unit → construir
+  `--zip` → `pytest -m e2e --python-alvo <pasta>/python/python.exe --app-dir
+  <pasta>` → upload do zip (`archive: false`). **Job `release`** (Ubuntu, único
+  com `contents: write`) baixa com `skip-decompress: true` — o artefato É um
+  .zip e a action o extrairia — e cria a Release com o SHA-256 nas notas.
+- **Testes (`tests/`)**: o pytest roda no Python do host e chama o alvo por
+  subprocesso (nada de teste entra na pasta). No Mac o alvo é o `.venv`.
+  `tests/ficha_ficticia.py` fabrica uma ficha do Estado (layout D) e a mesma
+  ficha escaneada; valores em **colunas espaçadas** — com um espaço só entre
+  eles o OCR lê a linha inteira como uma caixa e não remonta a tabela.
+  O caminho OCR devolve o nome da rubrica normalizado (`Vencimento`), por isso
+  o teste compara nomes sem diferenciar maiúsculas.
+
+**Pegadinhas:**
+- **`pip --platform win_amd64` no Mac NÃO resolve dependências do Windows**:
+  ele avalia os marcadores (`sys_platform`) do Mac e puxa `pyobjc` →
+  `ResolutionImpossible`. Quem resolve certo é `uv pip compile
+  --python-platform x86_64-pc-windows-msvc` (comando no cabeçalho do
+  `requirements-windows.lock`; sem `--upgrade` ele mantém as versões).
+- **`proxy-tools` (do pywebview) só existe como código-fonte** e precisa ser
+  compilado. O isolamento de build do pip passa o `setuptools` por
+  `PYTHONPATH`, que o Python embutido ignora → `Cannot import
+  'setuptools.build_meta'` (1º run no CI). O `setuptools` entra no lock via
+  `requirements-build-windows.txt`, é instalado primeiro (bloco tirado do
+  lock, com hash) e o resto vai com `--no-build-isolation`. Na máquina do
+  autor original funcionava por causa do wheel já compilado no cache do pip.
+- **Python preso na 3.12**: `rapidocr-onnxruntime` exige `<3.13`, e 3.12.10 foi
+  o último 3.12 com embeddable. Sair disso = migrar para o pacote `rapidocr`.
+- O lock atual traz `opencv-python 5.0.0.93` + `numpy 2.5.3`; os testes de OCR
+  passam com eles no Mac e no Windows (run 34632113906, 2026-09-11: 5/5 e2e
+  com o `python.exe` da pasta, `platform win32`; zip 153,5 MB).
+- `--python-alvo` vira absoluto com `.absolute()`, **não** `.resolve()`: o
+  python de um venv é link simbólico, e segui-lo cai no Python do sistema.
+- Saída de subprocesso no Windows vem na página de código do console e o
+  Python embutido (modo isolado pelo `._pth`) **ignora `PYTHONIOENCODING`** →
+  o que o alvo imprime para o teste ler é JSON só em ASCII.
+- **Não testado ainda**: Smart App Control com o zip **baixado** da Release
+  (Mark-of-the-Web). Testar numa máquina com SAC ligado antes de divulgar.
 
 ## Empacotamento (.exe) — ABANDONADO (2026-09-09)
 
@@ -240,7 +309,10 @@ folha diferentes; não se sobrepõem no mesmo ano).
 ## Pendências / próximos passos
 
 - **Deploy no Railway** (em andamento — usuário criou a conta; falta ligar o
-  repo `WilkersonPenido/conversor-ficha-financeira` e gerar o domínio).
+  repo `Fluix-Solutions/conversor-ficha-financeira` — antes
+  `WilkersonPenido/...` — e gerar o domínio).
+- **UAT da Release Windows** numa máquina com Smart App Control ligado, com o
+  zip baixado do GitHub (ver "Build Windows no GitHub Actions").
 - Scan da Serra de **qualidade muito baixa** (ex.: `Serra Alternado 1.pdf`) é
   recusado pelo filtro de qualidade. Melhorar exigiria pré-processar a imagem
   (deskew/contraste) antes do OCR.

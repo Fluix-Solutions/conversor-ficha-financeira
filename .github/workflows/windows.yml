@@ -1,0 +1,158 @@
+# Monta a pasta portátil do Conversor num Windows de verdade, testa com o
+# Python DA PASTA e publica o zip como GitHub Release.
+#
+#   - tag vX.Y / vX.Y.Z  -> Release com essa tag (tem que bater com server.VERSAO)
+#   - "Run workflow"     -> Release v<server.VERSAO> no commit escolhido;
+#                           com "publicar" desmarcado, só testa e deixa o zip
+#                           como artefato (14 dias), sem tag nem Release
+#   - PR para a main     -> só testa (zip como artefato); nunca publica
+#
+# Nada é publicado se qualquer passo falhar. Release existente nunca é
+# sobrescrita: para republicar, suba o VERSAO.
+name: Windows (pasta portátil)
+
+on:
+  push:
+    tags:
+      - "v[0-9]+.[0-9]+"
+      - "v[0-9]+.[0-9]+.[0-9]+"
+  # O "Run workflow" só existe depois que este arquivo está na main; o PR é
+  # como mudanças no app ou no build são testadas no Windows antes disso.
+  pull_request:
+    branches: [main]
+    paths:
+      - converter.py
+      - server.py
+      - app_desktop.py
+      - web/**
+      - construir_portatil.py
+      - release.py
+      - requirements*
+      - tests/**
+      - .github/workflows/windows.yml
+  workflow_dispatch:
+    inputs:
+      publicar:
+        description: "Publicar a Release v<VERSAO> (desmarque para só testar)"
+        type: boolean
+        default: true
+
+concurrency:
+  group: windows-${{ github.ref }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: windows-latest
+    timeout-minutes: 60
+    permissions:
+      contents: read
+    defaults:
+      run:
+        shell: bash
+    outputs:
+      tag: ${{ steps.tag.outputs.tag }}
+      zip: ${{ steps.tag.outputs.zip }}
+    env:
+      PASTA: portatil/Conversor de Ficha Financeira
+    steps:
+      - uses: actions/checkout@v7
+
+      # Python do HOST: só roda o construir_portatil.py e o pytest. O app
+      # roda com o Python embutido que vai dentro da pasta.
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Tag da Release (confere com server.VERSAO e com o commit)
+        id: tag
+        env:
+          REF_TYPE: ${{ github.ref_type }}
+          REF_NAME: ${{ github.ref_name }}
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          # Mesma condição do job `release`: só tag enviada ou "publicar".
+          PUBLICA: ${{ github.event_name == 'push' || inputs.publicar }}
+        run: |
+          ARGS=()
+          if [ "$REF_TYPE" = "tag" ]; then ARGS=(--ref-tag "$REF_NAME"); fi
+          TAG=$(python release.py tag "${ARGS[@]}")
+          # Tag já existente num commit antigo prenderia a Release a ele.
+          # Só importa quando publica: num PR o commit é o de merge, que nunca
+          # é o da tag, e todo PR depois da 1ª Release falharia aqui.
+          # Se a tag não existe, o gh sai com erro e põe o JSON do erro no
+          # stdout — por isso o teste do código de saída, e não `|| true`.
+          if [ "$PUBLICA" = "true" ]; then
+            if SHA_TAG=$(gh api "repos/$GH_REPO/commits/$TAG" --jq .sha 2>/dev/null); then
+              :
+            else
+              SHA_TAG=""
+            fi
+            python release.py tag "${ARGS[@]}" --sha-tag "$SHA_TAG" --sha "$GITHUB_SHA"
+          fi
+          ZIP=$(python -c "import release, sys; print(release.nome_zip(sys.argv[1]))" "$TAG")
+          echo "tag=$TAG" >> "$GITHUB_OUTPUT"
+          echo "zip=$ZIP" >> "$GITHUB_OUTPUT"
+          echo "Release $TAG -> $ZIP"
+
+      - name: Testes unitários
+        run: |
+          python -m pip install -r requirements-dev.txt
+          python -m pytest tests -m "not e2e" -q
+
+      - name: Monta a pasta e o zip
+        run: python construir_portatil.py portatil --zip "${{ steps.tag.outputs.zip }}"
+
+      - name: Testes com o Python da pasta
+        run: >
+          python -m pytest tests -m e2e -v
+          --python-alvo "$PASTA/python/python.exe"
+          --app-dir "$PASTA"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          path: ${{ steps.tag.outputs.zip }}
+          archive: false
+          retention-days: 14
+          if-no-files-found: error
+
+  release:
+    needs: build
+    # Tag enviada sempre publica; no botão manual, só com "publicar" marcado.
+    if: github.event_name == 'push' || inputs.publicar
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.build.outputs.tag }}
+      ZIP: ${{ needs.build.outputs.zip }}
+      GH_TOKEN: ${{ github.token }}
+      GH_REPO: ${{ github.repository }}
+    steps:
+      - uses: actions/checkout@v7
+
+      # O artefato É um .zip: sem skip-decompress a action o extrairia.
+      - uses: actions/download-artifact@v8
+        with:
+          name: ${{ needs.build.outputs.zip }}
+          path: dist
+          skip-decompress: true
+
+      - name: Release não pode existir
+        run: |
+          if gh release view "$TAG" > /dev/null 2>&1; then
+            echo "::error::A Release $TAG já existe e não é sobrescrita. Suba o VERSAO do server.py para publicar outra."
+            exit 1
+          fi
+
+      - name: Publica
+        run: |
+          python3 release.py notas --tag "$TAG" --zip "dist/$ZIP" > notas.md
+          gh release create "$TAG" "dist/$ZIP" \
+            --target "$GITHUB_SHA" \
+            --title "Conversor de Ficha Financeira $TAG (Windows)" \
+            --notes-file notas.md
