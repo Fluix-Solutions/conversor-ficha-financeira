@@ -1,17 +1,17 @@
-# Deploy web (Railway/Render). Instala tudo: engine + servidor.
+# Deploy web (Railway/Render). Instala tudo: engine + servidor + OCR.
 # Sem "-r requirements-base.txt": o Railpack copia só este arquivo antes do
 # pip install, então um include quebra o build. Manter em sincronia com
 # requirements-base.txt.
-#
-# OCR (rapidocr) fica de fora aqui por ora - pesa ~150 MB e precisa de config
-# extra no servidor. O que se perde SEM ele:
-#   1. Fichas ESCANEADAS (PDF de imagem, sem texto) não convertem de jeito
-#      nenhum - Serra e Estado dão erro pedindo o PDF com texto;
-#   2. No layout C, código de rubrica fora de RUBRICAS_C sai "Rubrica NNN".
-# Ao ativar aqui, subir também o --timeout do Procfile: OCR de uma ficha de
-# várias páginas leva minutos, muito acima dos 120s atuais.
 pdfplumber>=0.11
 openpyxl>=3.1
 pymupdf>=1.24
 flask>=3.0
 gunicorn>=21.0
+
+# OCR - necessário para converter fichas ESCANEADAS (PDF de imagem, sem
+# texto), Serra e Estado. Pesa ~210 MB (opencv sozinho são ~118 MB) e o pico
+# de RAM de uma conversão chega a ~580 MB: a instância precisa de folga.
+# opencv-python-headless vem antes de propósito, pra o rapidocr não puxar o
+# opencv-python "cheio".
+opencv-python-headless>=4.9
+rapidocr-onnxruntime>=1.3

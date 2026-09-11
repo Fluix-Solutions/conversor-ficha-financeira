@@ -95,8 +95,26 @@ verba são **somados**.
 ## Versão web (rodar online)
 
 `server.py` é um servidor Flask que serve a mesma interface (pasta `web/`).
-O PDF é convertido **na memória** e o arquivo temporário é apagado logo em
-seguida — nada fica salvo no servidor, e o conteúdo não vai para log.
+O PDF enviado é gravado num temporário só durante a conversão e apagado logo
+em seguida — nada fica salvo no servidor, e o conteúdo não vai para log.
+
+A conversão roda em **fila**, não na requisição: converter uma ficha escaneada
+leva de 1 a 2 minutos (OCR), tempo demais para uma requisição HTTP ficar
+aberta — proxy, navegador ou uma queda de rede derrubariam o trabalho no meio.
+O fluxo é:
+
+| Rota | O que faz |
+|---|---|
+| `POST /api/converter` | enfileira e devolve `{"job": "<id>"}` (HTTP 202) |
+| `GET /api/job/<id>` | estado e andamento (`Lendo a imagem da página 4 de 10`) |
+| `GET /api/job/<id>/arquivo` | baixa o `.xlsx` |
+
+O `.xlsx` gerado fica num temporário até o download e é apagado por uma faxina
+automática em no máximo 20 minutos (`JOB_TTL`).
+
+> **Os jobs vivem na memória do processo**, por isso o `Procfile` usa
+> `--workers 1` (com `--threads`). Com mais de um worker, a consulta do
+> andamento cairia num processo que não conhece o job.
 
 ### Rodar localmente
 
@@ -122,6 +140,11 @@ Defina as variáveis de ambiente antes de subir:
    (`gunicorn server:app`). O `runtime.txt` fixa o Python 3.12.
 4. Em **Variables**, defina `CONVERSOR_SENHA` (e opcionalmente `CONVERSOR_USUARIO`).
 5. Pronto — a URL gerada pelo Railway é o conversor online.
+
+**Tamanho da instância.** O OCR pesa: as dependências somam ~210 MB
+(opencv sozinho são ~118 MB) e o pico de RAM de uma conversão medido foi de
+**~580 MB**. A instância precisa de folga — numa pequena demais o processo é
+morto no meio da conversão.
 
 Arquivos de deploy: `requirements.txt`, `Procfile`, `runtime.txt`.
 

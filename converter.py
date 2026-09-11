@@ -1016,11 +1016,14 @@ def _restricoes_c(info) -> list:
     return restr
 
 
-def _converter_formato_c(pdf, avisos: list[str], caminho=None):
+def _converter_formato_c(pdf, avisos: list[str], caminho=None, progresso=None):
+    prog = progresso or _noop_progresso
     # --- passa 1: analisa páginas e resolve as que dão solução única ---
     paginas = []
     mapa_hash: dict[str, str] = {}
-    for page in pdf.pages:
+    _tot = len(pdf.pages)
+    for _i, page in enumerate(pdf.pages):
+        prog("Decifrando a página", _i + 1, _tot)
         info = _parse_pagina_c(page)
         if not info:
             continue
@@ -1281,7 +1284,7 @@ def _ocr_num(tok: str) -> float | None:
     return float(corpo + "." + t[-2:]) if corpo.lstrip("-").isdigit() else None
 
 
-def _converter_ocr(caminho, avisos: list[str]):
+def _converter_ocr(caminho, avisos: list[str], progresso=None):
     eng = _ocr_engine()
     if eng is None:
         raise ConversaoError(
@@ -1293,7 +1296,9 @@ def _converter_ocr(caminho, avisos: list[str]):
 
     doc = pymupdf.open(caminho)
     blocos: list[dict] = []
+    prog = progresso or _noop_progresso
     for pi in range(len(doc)):
+        prog("Lendo a imagem da página", pi + 1, len(doc))
         page = doc[pi]
         png = None
         imgs = page.get_images(full=True)
@@ -1521,7 +1526,7 @@ def _centros_meses_ocr(linhas):
     return melhor, x_total
 
 
-def _converter_ocr_serra(caminho, avisos: list[str]):
+def _converter_ocr_serra(caminho, avisos: list[str], progresso=None):
     eng = _ocr_engine()
     if eng is None:
         raise ConversaoError(
@@ -1537,7 +1542,9 @@ def _converter_ocr_serra(caminho, avisos: list[str]):
     nomes_cod: dict[str, str] = {}  # nome canônico por código (1ª leitura boa vence)
     deg_pref = None   # orientação que já deu certo (o scan é igual no doc todo)
     fichas_vazias = 0  # páginas que SÃO ficha mas o OCR não conseguiu remontar
+    prog = progresso or _noop_progresso
     for pi in range(n):
+        prog("Lendo a imagem da página", pi + 1, n)
         # Se várias páginas de ficha seguidas não renderam nada, o scan não tem
         # qualidade para este layout — parar aqui em vez de gastar minutos de
         # OCR em dezenas de páginas para no fim recusar do mesmo jeito.
@@ -1765,13 +1772,23 @@ ORIGENS = {
 }
 
 
-def converter(pdf_path: Path, out_path: Path, origem: str) -> dict:
+def _noop_progresso(etapa: str, atual: int = 0, total: int = 0) -> None:
+    """Callback de progresso padrão: não faz nada."""
+
+
+def converter(pdf_path: Path, out_path: Path, origem: str, progresso=None) -> dict:
     """Converte o PDF em .xlsx conforme a origem escolhida ('serra' ou 'estado').
     Retorna um resumo; levanta ConversaoError quando o PDF não pode ser convertido
-    ou quando não corresponde à origem escolhida."""
+    ou quando não corresponde à origem escolhida.
+
+    `progresso(etapa, atual, total)` é chamado ao longo da conversão para quem
+    quiser mostrar andamento (a versão web usa isso). Conversão por OCR leva
+    dezenas de segundos por ficha, então sem esse retorno a tela fica muda."""
     origem = (origem or "").lower()
     if origem not in ORIGENS:
         raise ValueError(f"origem inválida: {origem!r} (use 'serra' ou 'estado')")
+    prog = progresso or _noop_progresso
+    prog("Abrindo o PDF", 0, 0)
 
     # Os caches de OCR são indexados pelo caminho do PDF. No servidor cada
     # requisição usa um arquivo temporário novo, então nada é reaproveitado e
@@ -1800,12 +1817,12 @@ def converter(pdf_path: Path, out_path: Path, origem: str) -> dict:
         if not tem_texto:
             if origem == "estado":
                 # Ficha do Estado escaneada: converte por OCR da imagem.
-                blocos = _converter_ocr(pdf_path, avisos)
+                blocos = _converter_ocr(pdf_path, avisos, prog)
                 fmt = "OCR"
                 pdf = None  # não usa mais o pdfplumber
             else:
                 # Ficha da Serra escaneada: converte por OCR da imagem.
-                blocos = _converter_ocr_serra(pdf_path, avisos)
+                blocos = _converter_ocr_serra(pdf_path, avisos, prog)
                 fmt = "OCR"
                 pdf = None  # não usa mais o pdfplumber
         else:
@@ -1829,7 +1846,7 @@ def converter(pdf_path: Path, out_path: Path, origem: str) -> dict:
                 blocos = (
                     _converter_formato_d(pdf, avisos)
                     if fmt == "D"
-                    else _converter_formato_c(pdf, avisos, pdf_path)
+                    else _converter_formato_c(pdf, avisos, pdf_path, prog)
                 )
             elif fmt == "A":
                 matricula_atual = None

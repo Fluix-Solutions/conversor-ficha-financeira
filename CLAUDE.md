@@ -36,14 +36,33 @@ largo — uma linha por `Ano + Mês`, uma coluna por rubrica (só o nome da verb
 
 ## Versão web (`server.py` + `web/`)
 
-Flask. Rotas: `/` e assets da pasta `web/`; `GET /api/origens`, `GET /api/versao`,
-`POST /api/converter` (multipart `pdf` + `origem` → JSON com `resumo` +
-`arquivo_b64`). Converte via arquivo temporário apagado no `finally` (nada
-persiste, nada em log). Login opcional por env: `CONVERSOR_SENHA` /
-`CONVERSOR_USUARIO`. Deploy: `Procfile` (`gunicorn server:app`), `runtime.txt`
-(py 3.12), `requirements.txt` (engine + flask + gunicorn). Front em `web/` é o
-mesmo visual do `ui/` adaptado para `fetch` + `<input type=file>` + drag-drop.
-Alvo: Railway (site separado por ora; migrar pro Valorizei depois é possível).
+Flask. Rotas: `/` e assets de `web/`; `GET /api/origens`, `GET /api/versao`.
+
+**Conversão em FILA** (2026-09-11), porque OCR leva 1-2 min e não cabe numa
+requisição HTTP aberta (proxy/navegador/queda de rede matariam o trabalho):
+- `POST /api/converter` (multipart `pdf` + `origem`) → **202** `{"job": id}`,
+  dispara uma `threading.Thread` e retorna na hora;
+- `GET /api/job/<id>` → `processando` (+ `etapa`/`atual`/`total`), `pronto`
+  (+ `resumo`) ou `erro`;
+- `GET /api/job/<id>/arquivo` → o `.xlsx` via `send_file`.
+
+O andamento vem do callback `progresso(etapa, atual, total)` de
+`converter()` — ligado nos 3 laços lentos (`_converter_ocr`,
+`_converter_ocr_serra`, `_converter_formato_c`).
+
+**Pegadinhas:**
+- Os jobs vivem num dict na memória do processo → o `Procfile` **precisa** de
+  `--workers 1` (usa `--threads 8`). Com 2 workers a consulta cai num processo
+  que não conhece o job. Se um dia precisar escalar, os jobs têm que sair p/
+  disco/Redis.
+- O PDF de entrada é apagado no `finally` do job; o `.xlsx` fica num temporário
+  até o download e some pela thread de faxina (`JOB_TTL` = 20 min). Sem essa
+  faxina o resultado ficaria guardado, quebrando o "processa e descarta".
+- `--timeout 900` no gunicorn: OCR de ficha grande passa fácil dos 120s antigos.
+
+Login opcional por env: `CONVERSOR_SENHA` / `CONVERSOR_USUARIO`. `runtime.txt`
+= py 3.12. Front em `web/` é o visual do `ui/` adaptado, com barra de progresso.
+Alvo: Railway (instância precisa de folga: pico medido ~580 MB de RAM).
 
 ## Empacotamento (.exe) — ABANDONADO (2026-09-09)
 
@@ -164,8 +183,9 @@ folha diferentes; não se sobrepõem no mesmo ano).
 - Scan da Serra de **qualidade muito baixa** (ex.: `Serra Alternado 1.pdf`) é
   recusado pelo filtro de qualidade. Melhorar exigiria pré-processar a imagem
   (deskew/contraste) antes do OCR.
-- OCR no **web/Railway**: hoje fica de fora (~150 MB). Se ativar, subir o
-  `--timeout` do Procfile — OCR de ficha com várias páginas leva minutos.
+- OCR **já vai pro web** (2026-09-11): `requirements.txt` tem
+  `opencv-python-headless` + `rapidocr-onnxruntime`. Falta validar no Railway
+  com instância maior (o usuário vai aumentar).
 - Conversão em lote (pasta inteira).
 - Incluir Descontos/Outros, se o sistema precisar.
 - Testar com mais fichas reais.

@@ -269,6 +269,9 @@ h1{ font-size:24px; font-weight:700; margin:0; letter-spacing:-.01em; }
 .result.ok{ background:hsl(var(--success-surface)); border:1px solid hsl(var(--success-border)); color:hsl(var(--success)); }
 .result.warn{ background:hsl(var(--warning-surface)); border:1px solid hsl(var(--warning-border)); color:hsl(var(--warning)); }
 .result.err{ background:hsl(var(--destructive-surface)); border:1px solid hsl(var(--destructive-border)); color:hsl(var(--destructive)); }
+.result.prog{ background:hsl(var(--muted)); border:1px solid hsl(var(--border)); color:hsl(var(--foreground)); }
+.result .barra{ margin-top:10px; height:6px; border-radius:999px; background:hsl(var(--border)); overflow:hidden; }
+.result .barra i{ display:block; height:100%; background:hsl(var(--accent)); border-radius:999px; transition:width .3s ease; }
 .result b{ font-weight:700; }
 .result .avisos{ margin-top:10px; padding-top:10px; border-top:1px solid currentColor; opacity:.9; }
 #btn-baixar-de-novo{ margin-top:12px; }

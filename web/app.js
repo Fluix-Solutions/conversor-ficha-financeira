@@ -150,26 +150,78 @@ fileInput.addEventListener("change", () => setFile(fileInput.files[0]));
 );
 dz.addEventListener("drop", (e) => setFile(e.dataTransfer.files[0]));
 
-/* ---------- converter ---------- */
+/* ---------- converter ----------
+   A conversão roda numa fila no servidor: o POST devolve um id e aqui a gente
+   acompanha o andamento. Ficha escaneada leva dezenas de segundos (OCR) — sem
+   esse retorno a pessoa acha que travou e recarrega a página no meio. */
+const espera = (ms) => new Promise((r) => setTimeout(r, ms));
+
+function mostrarProgresso(d) {
+  const box = $("result");
+  $("result-card").hidden = false;
+  $("btn-baixar-de-novo").hidden = true;
+  box.className = "result prog";
+  const etapa = d.etapa || "Convertendo";
+  const temTotal = d.total > 0;
+  const pct = temTotal ? Math.round((d.atual / d.total) * 100) : null;
+  box.innerHTML =
+    '<b><span class="spinner"></span>' + etapa +
+    (temTotal ? " " + d.atual + " de " + d.total : "…") + "</b>" +
+    (pct !== null
+      ? '<div class="barra"><i style="width:' + pct + '%"></i></div>'
+      : "");
+}
+
+async function acompanhar(job) {
+  // Uma falha isolada de rede não deve matar a conversão, que segue no
+  // servidor; só desiste depois de algumas tentativas seguidas sem resposta.
+  let falhas = 0;
+  for (;;) {
+    await espera(1500);
+    let d;
+    try {
+      const r = await fetch("api/job/" + job);
+      if (r.status === 404) {
+        mostrarErro("A conversão expirou. Envie o PDF de novo.", "aviso");
+        return;
+      }
+      d = await r.json();
+      falhas = 0;
+    } catch (e) {
+      if (++falhas >= 5) {
+        mostrarErro("Perdi contato com o servidor. Tente de novo.", "erro");
+        return;
+      }
+      continue;
+    }
+    if (d.estado === "erro") { mostrarErro(d.erro, d.tipo); return; }
+    if (d.estado === "pronto") {
+      state.ultimo = { job: job, nome: d.arquivo_nome };
+      baixar(job, d.arquivo_nome);
+      mostrarSucesso(d.resumo, d.arquivo_nome);
+      return;
+    }
+    mostrarProgresso(d);
+  }
+}
+
 $("btn-converter").addEventListener("click", async () => {
   const btn = $("btn-converter");
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span>Convertendo…';
-  $("result-card").hidden = true;
 
   const fd = new FormData();
   fd.append("pdf", state.file);
   fd.append("origem", state.origem);
 
   try {
+    mostrarProgresso({ etapa: "Enviando o PDF" });
     const resp = await fetch("api/converter", { method: "POST", body: fd });
     const data = await resp.json();
     if (!resp.ok || data.erro) {
       mostrarErro(data.erro || "Erro na conversão.", data.tipo);
     } else {
-      state.ultimo = { nome: data.arquivo_nome, b64: data.arquivo_b64 };
-      baixar(data.arquivo_nome, data.arquivo_b64);
-      mostrarSucesso(data.resumo, data.arquivo_nome);
+      await acompanhar(data.job);
     }
   } catch (e) {
     mostrarErro("Não consegui falar com o servidor. Tente de novo.", "erro");
@@ -179,23 +231,18 @@ $("btn-converter").addEventListener("click", async () => {
   atualizarPassos();
 });
 
-function baixar(nome, b64) {
-  const bin = atob(b64);
-  const buf = new Uint8Array(bin.length);
-  for (let i = 0; i < bin.length; i++) buf[i] = bin.charCodeAt(i);
-  const blob = new Blob([buf], {
-    type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-  });
+function baixar(job, nome) {
+  // O servidor entrega o .xlsx direto (Content-Disposition), então basta
+  // apontar o link para o endpoint do job.
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
+  a.href = "api/job/" + job + "/arquivo";
   a.download = nome;
   document.body.appendChild(a);
   a.click();
   a.remove();
-  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
 }
 $("btn-baixar-de-novo").addEventListener("click", () => {
-  if (state.ultimo) baixar(state.ultimo.nome, state.ultimo.b64);
+  if (state.ultimo) baixar(state.ultimo.job, state.ultimo.nome);
 });
 
 function mostrarSucesso(r, nome) {
