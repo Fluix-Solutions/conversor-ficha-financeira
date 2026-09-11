@@ -16,16 +16,27 @@ ES) em uma planilha `.xlsx` com os **Proventos** por mês: uma linha por
 
 ## Usar o programa (janela)
 
-Dê um **duplo clique em `Conversor.bat`** (ou no `.exe`, se instalado). Na janela:
+Dê um **duplo clique em `Conversor.bat`**. Abre a **mesma tela do site**, com
+os 3 passos guiados e a barra de progresso — só que rodando na sua máquina.
 
-1. **Origem da ficha** → campo de pesquisa: digite parte do nome
-   (ex: `serra`) e escolha na lista — **Município da Serra** ou
-   **Estado do Espírito Santo**.
-2. **Abrir PDF...** → escolha a ficha financeira.
-3. **Converter para Excel** → escolha onde salvar.
+1. **Origem da ficha** → digite parte do nome (ex: `serra`) e escolha na lista.
+2. **Arquivo PDF** → clique ou arraste a ficha.
+3. **Converter para Excel** → ao terminar, abre um "Salvar como" e a planilha
+   é aberta em seguida.
 
-O programa mostra o resultado e pergunta se quer abrir a planilha. Se a origem
-escolhida não corresponder ao PDF, ele avisa e não converte.
+**Use o desktop para fichas escaneadas.** O OCR roda no seu computador:
+medido em ~72 s, contra ~14 min na instância do Railway (3 vCPU). Para PDFs
+de texto tanto faz — os dois são instantâneos.
+
+Como funciona (`app_desktop.py`): em vez de manter duas interfaces, o app sobe
+o próprio `server.py` numa porta local e abre uma janela apontando para ele.
+`server.py` e a pasta `web/` são usados **sem alteração nenhuma**. A única
+diferença é o download: o `web/app.js` usa um link de navegador, que não
+funciona bem em janela pywebview, então o app substitui a função `baixar()`
+depois que a página carrega — sem tocar no arquivo.
+
+`app_web.py` + `ui/` são a janela antiga (interface anterior ao redesenho),
+mantidos como reserva.
 
 ## Usar pela linha de comando (opcional)
 

@@ -82,6 +82,31 @@ Login opcional por env: `CONVERSOR_SENHA` / `CONVERSOR_USUARIO`. `runtime.txt`
 = py 3.12. Front em `web/` é o visual do `ui/` adaptado, com barra de progresso.
 Alvo: Railway (instância precisa de folga: pico medido ~580 MB de RAM).
 
+## App de desktop (`app_desktop.py`) — 2026-09-11
+
+Reaproveita a interface da web em vez de duplicá-la: sobe `server.py` numa
+porta local (`_porta_livre`, bind em :0) numa thread e abre uma janela
+pywebview apontando para `http://127.0.0.1:<porta>`. **`server.py` e `web/`
+ficam intocados** — fila, progresso e mensagens são os mesmos.
+
+Motivo de existir: OCR local leva ~72 s; no Railway (3 vCPU) leva ~14 min.
+
+**Pegadinhas (as duas custaram tempo):**
+- O download do `web/app.js` é um link de navegador e não funciona em
+  pywebview. O app injeta `SHIM_JS` no evento `loaded`, substituindo o global
+  `window.baixar` por uma chamada ao `js_api` que abre "Salvar como" nativo.
+  Assim `web/app.js` não precisa saber que está no desktop.
+- **Atributo que guarda a janela TEM que ser privado** (`self._window`). O
+  pywebview inspeciona os atributos públicos do `js_api` para expor à página;
+  com `self.window` ele entra em recursão infinita no objeto nativo e despeja
+  ~137 KB de erro (`window.native.AccessibilityObject.Bounds.Empty.Empty...`).
+- O handler de `loaded` aceita `*args` e **não retorna nada** — devolver o
+  resultado do `evaluate_js` causa o mesmo despejo de erro.
+- `CONVERSOR_SENHA` é removida do ambiente ANTES de importar o `server`
+  (o módulo lê a senha no import), senão o app pediria login local.
+
+`Conversor.bat` aponta para cá. `app_web.py` + `ui/` = janela antiga, reserva.
+
 ## Empacotamento (.exe) — ABANDONADO (2026-09-09)
 
 Caminho do `.exe` descartado: a máquina do usuário tem **Smart App Control em
