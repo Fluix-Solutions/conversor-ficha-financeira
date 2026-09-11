@@ -90,8 +90,8 @@ Electron não resolvem — é falta de assinatura de código). Os arquivos de bu
 
 **PDF escaneado (imagem, sem texto)** — Estado e Serra. Detectado em
 `converter()`: o texto do carimbo do PJe (assinatura/URL/"Num.") é descartado
-antes de medir, senão um scan parece "ter texto". OCR = rapidocr,
-`requirements-desktop.txt` (não vai pro web → lá o scan é recusado).
+antes de medir, senão um scan parece "ter texto". OCR = rapidocr, presente no
+desktop **e no web** (ver as pegadinhas do Dockerfile acima).
 **Cada linha é validada** (soma dos 12 meses == total impresso); o que não
 fecha vira aviso "CONFERIR". Sempre acrescenta o aviso "lida por OCR - confira".
 
