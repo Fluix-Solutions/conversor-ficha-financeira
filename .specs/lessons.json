@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 5,
+  "next_id": 8,
   "lessons": [
     {
       "id": "L-001",
@@ -76,6 +76,60 @@
       ],
       "created": "2026-09-11T17:54:23Z",
       "last_seen": "2026-09-11T17:54:23Z"
+    },
+    {
+      "id": "L-005",
+      "key": "gate_fail::when installing into an embedded python that ignores pythonpath pin the build backend in the lock preinstall it and install the rest with no build isolation",
+      "text": "When installing into an embedded Python that ignores PYTHONPATH, pin the build backend in the lock, preinstall it and install the rest with --no-build-isolation",
+      "signal": "gate_fail",
+      "scope": "build-script",
+      "status": "candidate",
+      "features": [
+        "build-windows"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "run 34631686098 --log-failed:154 (WIN-25; construir_portatil.py:113-126) (build-script)"
+      ],
+      "created": "2026-09-11T18:28:38Z",
+      "last_seen": "2026-09-11T18:28:38Z"
+    },
+    {
+      "id": "L-006",
+      "key": "ac_gap::run publish only preconditions in ci only on runs that publish so test only triggers are never blocked by existing release state",
+      "text": "Run publish-only preconditions in CI only on runs that publish, so test-only triggers are never blocked by existing release state",
+      "signal": "ac_gap",
+      "scope": "ci-workflow",
+      "status": "candidate",
+      "features": [
+        "build-windows"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "WIN-22/WIN-24 .github/workflows/windows.yml:84-89 (ci-workflow)"
+      ],
+      "created": "2026-09-11T18:28:38Z",
+      "last_seen": "2026-09-11T18:28:38Z"
+    },
+    {
+      "id": "L-007",
+      "key": "spec_precision_gap::state which triggers or modes each ci acceptance criterion applies to when a workflow has both publishing and test only runs",
+      "text": "State which triggers or modes each CI acceptance criterion applies to when a workflow has both publishing and test-only runs",
+      "signal": "spec_precision_gap",
+      "scope": "ci-workflow",
+      "status": "candidate",
+      "features": [
+        "build-windows"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "WIN-23 spec.md:73 (ci-workflow)"
+      ],
+      "created": "2026-09-11T18:28:38Z",
+      "last_seen": "2026-09-11T18:28:38Z"
     }
   ]
 }

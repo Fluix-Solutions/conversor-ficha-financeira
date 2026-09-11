@@ -38,6 +38,24 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: WIN-01 .github/workflows/windows.yml:116-117 (ci-workflow)
 - last seen: 2026-09-11T17:54:23Z
 
+### L-005 - When installing into an embedded Python that ignores PYTHONPATH, pin the build backend in the lock, preinstall it and install the rest with --no-build-isolation
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `build-script` · harmful: 0
+- features: build-windows
+- evidence: run 34631686098 --log-failed:154 (WIN-25; construir_portatil.py:113-126) (build-script)
+- last seen: 2026-09-11T18:28:38Z
+
+### L-006 - Run publish-only preconditions in CI only on runs that publish, so test-only triggers are never blocked by existing release state
+- signal: `ac_gap` · recurrence: 1 feature(s) · scope: `ci-workflow` · harmful: 0
+- features: build-windows
+- evidence: WIN-22/WIN-24 .github/workflows/windows.yml:84-89 (ci-workflow)
+- last seen: 2026-09-11T18:28:38Z
+
+### L-007 - State which triggers or modes each CI acceptance criterion applies to when a workflow has both publishing and test-only runs
+- signal: `spec_precision_gap` · recurrence: 1 feature(s) · scope: `ci-workflow` · harmful: 0
+- features: build-windows
+- evidence: WIN-23 spec.md:73 (ci-workflow)
+- last seen: 2026-09-11T18:28:38Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.
