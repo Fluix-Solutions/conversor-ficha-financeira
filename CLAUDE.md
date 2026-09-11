@@ -59,6 +59,18 @@ O andamento vem do callback `progresso(etapa, atual, total)` de
   até o download e some pela thread de faxina (`JOB_TTL` = 20 min). Sem essa
   faxina o resultado ficaria guardado, quebrando o "processa e descarta".
 - `--timeout 900` no gunicorn: OCR de ficha grande passa fácil dos 120s antigos.
+- **OCR satura CPU e, com 1 worker, deixa o site todo lento** enquanto
+  converte — inclusive para quem só mandou um PDF de texto. Por isso
+  `_ocr_engine()` fixa `OMP_NUM_THREADS = CPUs-1`, deixando um núcleo para
+  atender requisições. Se a instância tiver 1 CPU só, não tem o que fazer:
+  durante um OCR o site fica lento mesmo.
+- O modelo de OCR é carregado numa thread no arranque (`_aquecer_ocr`). Sem
+  isso a 1ª chamada pagava ~2,5 s — e quem pagava era o usuário, porque o
+  front consulta `/api/versao` ao abrir a página.
+- **O `Dockerfile` é o que o Railway usa** (não o Procfile). Ele troca o
+  `opencv-python` (com GUI, quebra com `libxcb.so.1` em container headless)
+  pelo `opencv-python-headless`, e confere o import no build — imagem sem OCR
+  falha no build em vez de subir quebrada.
 
 Login opcional por env: `CONVERSOR_SENHA` / `CONVERSOR_USUARIO`. `runtime.txt`
 = py 3.12. Front em `web/` é o visual do `ui/` adaptado, com barra de progresso.

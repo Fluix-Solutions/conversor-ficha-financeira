@@ -18,6 +18,7 @@ Reconhece dois layouts automaticamente:
 from __future__ import annotations
 
 import argparse
+import os
 import re
 import sys
 from pathlib import Path
@@ -577,6 +578,13 @@ _OCR_CACHE: dict[tuple[str, int], list] = {}
 def _ocr_engine():
     global _OCR_ENGINE, _OCR_ERRO
     if _OCR_ENGINE is None:
+        # O OCR é puro CPU e o onnxruntime, por padrão, ocupa todos os núcleos.
+        # Num servidor com 1 worker isso deixa o site inteiro lento enquanto
+        # uma ficha escaneada converte — até para quem só quer mandar um PDF
+        # de texto. Deixa um núcleo livre para continuar atendendo.
+        os.environ.setdefault(
+            "OMP_NUM_THREADS", str(max(1, (os.cpu_count() or 2) - 1))
+        )
         try:
             from rapidocr_onnxruntime import RapidOCR
         except Exception as e:  # noqa: BLE001 - inclui falta de lib do sistema

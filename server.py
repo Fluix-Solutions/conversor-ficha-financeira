@@ -125,6 +125,20 @@ def _faxina() -> None:
 threading.Thread(target=_faxina, daemon=True).start()
 
 
+def _aquecer_ocr() -> None:
+    """Carrega o modelo de OCR no arranque, fora do caminho das requisicoes.
+
+    Sem isso a primeira chamada paga o carregamento (~2,5 s) — e como o front
+    consulta /api/versao ao abrir a pagina, quem pagava era o usuario."""
+    try:
+        ocr_status()
+    except Exception:  # noqa: BLE001 - aquecer nunca deve derrubar o servidor
+        pass
+
+
+threading.Thread(target=_aquecer_ocr, daemon=True).start()
+
+
 def _autorizado() -> bool:
     if not _SENHA:
         return True
@@ -170,6 +184,7 @@ def api_origens():
 def api_versao():
     # `ocr` diz se o servidor consegue ler ficha escaneada. Sem ele o
     # deploy parece saudável e só quebra quando alguém manda um scan.
+    # O modelo já foi aquecido no arranque, então aqui é só leitura.
     return jsonify({"versao": VERSAO, **ocr_status()})
 
 
