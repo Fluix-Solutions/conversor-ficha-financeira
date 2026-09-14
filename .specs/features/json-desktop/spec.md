@@ -98,12 +98,12 @@ A v1.1 já gera JSON (motor, CLI e tela web, commit `6c0cfea`), mas no app de de
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| JSONDESK-01 | P1: Salvar JSON — AC 1, 2, edge `.JSON` | Execute | Pending |
-| JSONDESK-02 | P1: Salvar JSON — AC 3 | Execute | Pending |
-| JSONDESK-03 | P1: Salvar JSON — AC 4 | Execute | Pending |
-| JSONDESK-04 | P1: Salvar JSON — AC 5 | Execute | Pending |
-| JSONDESK-05 | P1: Planilha — AC 1, 2 | Execute | Pending |
-| JSONDESK-06 | P1: Build — AC 1 | Execute | Pending |
+| JSONDESK-01 | P1: Salvar JSON — AC 1, 2, edge `.JSON` | Execute | Implementing |
+| JSONDESK-02 | P1: Salvar JSON — AC 3 | Execute | Implementing |
+| JSONDESK-03 | P1: Salvar JSON — AC 4 | Execute | Implementing |
+| JSONDESK-04 | P1: Salvar JSON — AC 5 | Execute | Implementing |
+| JSONDESK-05 | P1: Planilha — AC 1, 2 | Execute | Implementing |
+| JSONDESK-06 | P1: Build — AC 1 | Execute | Implementing |
 | JSONDESK-07 | P1: Build — AC 2 | Execute | Pending |
 
 **Coverage:** 7 total, 7 mapped to steps, 0 unmapped
