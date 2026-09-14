@@ -1010,6 +1010,23 @@ def _parse_pagina_c(page):
         toks = ln.split()
         if not toks:
             continue
+        # Um mês com valor mais largo (ex.: dezembro, com 13º salário somado)
+        # pode ficar tão perto do valor seguinte que o pdfplumber extrai os
+        # dois colados num token só, sem espaço - a linha perde 1 valor e a
+        # rubrica inteira era descartada em silêncio (nem virava aviso). Cada
+        # valor começa no glifo-prefixo, então separa nessa marca; só aceita
+        # a divisão quando TODOS os pedaços resultantes viram valores válidos
+        # (para não fatiar por engano um nome de rubrica que contenha o
+        # mesmo glifo por coincidência).
+        toks_expandido = []
+        for t in toks:
+            if t.count(prefixo) > 1:
+                partes = [prefixo + p for p in t.split(prefixo)[1:]]
+                if all(valor_re.match(p) for p in partes):
+                    toks_expandido.extend(partes)
+                    continue
+            toks_expandido.append(t)
+        toks = toks_expandido
         vals = [t for t in toks if valor_re.match(t)]
         t0 = dec_letras(toks[0]).lower()
         if len(toks) == 1 and "antagen" in t0:
