@@ -119,7 +119,9 @@ def test_cli_notas_calcula_o_sha256_do_zip(tmp_path):
     r = subprocess.run(
         [sys.executable, str(RAIZ / "release.py"), "notas", "--tag", "v1.1",
          "--zip", str(z)],
-        capture_output=True, text=True, check=True,
+        # encoding="utf-8" no PAI: o filho escreve UTF-8 (reconfigure), e sem
+        # isso o Windows decodifica com cp1252 e embaralha os acentos.
+        capture_output=True, encoding="utf-8", check=True,
         env={**os.environ, "PYTHONIOENCODING": "cp1252"},
     )
     assert hashlib.sha256(b"conteudo qualquer").hexdigest() in r.stdout
