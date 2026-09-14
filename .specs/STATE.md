@@ -20,11 +20,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/build-windows/`
-- **Phase / Task**: Execute concluído (T1-T16); Verifier rodada 3 = PASS
-- **Completed**: T1-T16; CI Windows verde no PR #1 (runs 34632113906, 34633772453)
+- **Feature**: `.specs/features/build-windows/` — concluída e publicada
+- **Phase / Task**: T1-T19 + correções; Verifier rodada 4 = PASS
+- **Completed**: PR #1 mergeado na `main` (0724aa4); Release **v1.1** publicada com o zip (153,5 MB, sha256 23eff6c9…1c66); provas de produção nos runs 34846003592 (sem publicar), 34846236087 (publicou), 34846508283 (recusou republicar)
 - **In-progress** (file:line): nenhum
-- **Next step**: usuário faz UAT do zip do artefato com Smart App Control; depois merge do PR #1 e publicação da v1.1 (tag ou Run workflow com `publicar`) — conferências pós-merge listadas em `validation.md`
-- **Blockers**: nenhum (merge e publicação dependem de ok explícito do usuário)
+- **Next step**: UAT do zip **da Release** (o teste do usuário usou o zip do build) numa máquina com Smart App Control; ideias adiadas em `context.md` (lançador assinado, log de erro, aviso de WebView2, zip sem `__pycache__`, teste do passo da tag)
+- **Blockers**: nenhum
 - **Uncommitted files**: nenhum
-- **Branch**: `build-windows` (PR #1 → `main`)
+- **Branch**: `main`
