@@ -127,6 +127,46 @@ def _coluna(codigo: str, nome: str) -> str:
     return (nome or "").strip() or str(codigo)
 
 
+_VALOR_COLADO_RE = re.compile(r"-?\d{1,3}(?:\.\d{3})*,\d{2}")
+
+
+def _valores_colados(txt: str) -> list[str] | None:
+    """Dois (ou mais) valores grudados sem separador -> a lista deles.
+
+    Quando um mês tem valor mais largo (dezembro, que soma o 13º), a coluna
+    seguinte pode ficar tão perto que o extrator de texto devolve os dois
+    números juntos: "3.458,4111.786,39". Sem separar, o valor não casa com
+    `VALOR_RE` e some da planilha **sem aviso**.
+
+    Devolve None quando não é esse caso. A exigência de os pedaços cobrirem o
+    texto INTEIRO é o que impede fatiar por engano coisas como CPF
+    ("099.195.757-12", sem vírgula, nem casa) ou texto livre ("pago nos dias
+    01,2,5,9,19,24" — os pedaços não recompõem o original)."""
+    partes = _VALOR_COLADO_RE.findall(txt)
+    if len(partes) >= 2 and "".join(partes) == txt:
+        return partes
+    return None
+
+
+def _valores_da_palavra(w) -> list[tuple[str, float]]:
+    """(valor, x central) de uma palavra extraída do PDF. Quase sempre um
+    valor só; se vierem dois grudados, divide e estima o x de cada um
+    proporcionalmente dentro da caixa da palavra, para cada um cair no mês
+    certo da grade."""
+    t = w["text"]
+    if VALOR_RE.match(t):
+        return [(t, (w["x0"] + w["x1"]) / 2)]
+    partes = _valores_colados(t)
+    if not partes:
+        return []
+    largura = (w["x1"] - w["x0"]) / len(t)
+    saida, pos = [], 0
+    for p in partes:
+        saida.append((p, w["x0"] + (pos + len(p) / 2) * largura))
+        pos += len(p)
+    return saida
+
+
 def agrupar_linhas(itens, key_top, y_tol: float = 2.5):
     """Agrupa itens (words ou chars) em linhas por coordenada vertical."""
     linhas: list[list] = []
@@ -211,15 +251,15 @@ def _pagina_formato_a(page, avisos: list[str]):
                 continue
             coluna = _coluna(codigo_atual, nome_atual)
             for w in linha:
-                if not VALOR_RE.match(w["text"]):
-                    continue
-                xc = (w["x0"] + w["x1"]) / 2
-                if xc > x_max:
-                    continue
-                idx = min(centros, key=lambda i: abs(centros[i] - xc))
-                if abs(centros[idx] - xc) > 20:
-                    continue
-                dados[MESES[idx]][coluna] = dados[MESES[idx]].get(coluna, 0.0) + parse_valor(w["text"])
+                for texto_valor, xc in _valores_da_palavra(w):
+                    if xc > x_max:
+                        continue
+                    idx = min(centros, key=lambda i: abs(centros[i] - xc))
+                    if abs(centros[idx] - xc) > 20:
+                        continue
+                    dados[MESES[idx]][coluna] = (
+                        dados[MESES[idx]].get(coluna, 0.0) + parse_valor(texto_valor)
+                    )
 
     if not ordem:
         return None
@@ -250,19 +290,34 @@ def _tokens_numericos(chars):
         ),
         key=lambda c: c["x0"],
     )
+
+    def _fechar(buf, xs):
+        """Fecha o número acumulado. Se dois valores ficaram sem vão entre
+        eles (colunas muito juntas), separa os dois — aqui o x de cada um sai
+        exato, porque há um x por caractere."""
+        if VALOR_RE.match(buf):
+            return [(buf, sum(xs) / len(xs))]
+        partes = _valores_colados(buf)
+        if not partes:
+            return []
+        saida, i = [], 0
+        for p in partes:
+            trecho = xs[i:i + len(p)]
+            saida.append((p, sum(trecho) / len(trecho)))
+            i += len(p)
+        return saida
+
     tokens: list[tuple[str, float]] = []
     buf, xs, fim_ant = "", [], None
     for c in seq:
         ch = decode_cid(c["text"]) if "(cid:" in c["text"] else c["text"]
         if fim_ant is not None and c["x0"] - fim_ant > 4.0:
-            if VALOR_RE.match(buf):
-                tokens.append((buf, sum(xs) / len(xs)))
+            tokens.extend(_fechar(buf, xs))
             buf, xs = "", []
         buf += ch
         xs.append((c["x0"] + c["x1"]) / 2)
         fim_ant = c["x1"]
-    if VALOR_RE.match(buf):
-        tokens.append((buf, sum(xs) / len(xs)))
+    tokens.extend(_fechar(buf, xs))
     return tokens
 
 
@@ -1001,6 +1056,7 @@ def _parse_pagina_c(page):
         return achou >= 8
 
     dados_rows: list[tuple] = []
+    linhas_suspeitas: list[int] = []  # cara de rubrica, mas sem os 13 valores
     tot_v = tot_d = tot_l = None
     todos_val: list[str] = []
     secao = 0
@@ -1057,6 +1113,11 @@ def _parse_pagina_c(page):
             nao_val = toks[: len(toks) - len(vals)]
             dados_rows.append((nao_val[0], " ".join(nao_val[1:]), vals[:12], vals[12], secao))
             todos_val += vals
+        elif secao == 1 and 8 <= len(vals) < 13:
+            # Tem cara de rubrica (muitos valores) mas não fecha os 13. Antes
+            # isso sumia calado — e foi assim que uma rubrica de R$ 53 mil
+            # ficou de fora de uma ficha. Agora vira aviso.
+            linhas_suspeitas.append(len(vals))
 
     if not dados_rows:
         return None
@@ -1094,6 +1155,7 @@ def _parse_pagina_c(page):
         "tot_v": tot_v, "tot_d": tot_d, "tot_l": tot_l, "sep": sep,
         "prefixo": prefixo, "decimal": decimal,
         "num_pagina": page.page_number,
+        "linhas_suspeitas": linhas_suspeitas,
     }
 
 
@@ -1147,6 +1209,12 @@ def _converter_formato_c(pdf, avisos: list[str], caminho=None, progresso=None):
 
     for info in paginas:
         npag = info["num_pagina"]
+        for n_vals in info.get("linhas_suspeitas", ()):
+            avisos.append(
+                f"Página {npag}: uma linha da seção Vantagens tem {n_vals} valores "
+                f"em vez de 13 e ficou de FORA da planilha - confira essa página "
+                f"contra o PDF."
+            )
         digitos = dict(info["solo"] or {})
         # completa/ajusta pelo desenho dos glifos
         for glifo, h in info["hashes"].items():
@@ -1264,6 +1332,9 @@ def _converter_formato_c(pdf, avisos: list[str], caminho=None, progresso=None):
 # na linha seguinte.
 # ----------------------------------------------------------------------------
 _US_NUM_RE = re.compile(r"-?\d{1,3}(?:,\d{3})*\.\d{2}")
+# Fim de um valor US (".DD") seguido direto de outro número = dois valores
+# grudados sem espaço; a substituição devolve o espaço entre eles.
+_US_COLADO_RE = re.compile(r"(\.\d{2})(?=-?\d)")
 _LINHA_D_RE = re.compile(
     r"^(\d{1,4})\s+(.+?)\s+((?:-?\d{1,3}(?:,\d{3})*\.\d{2}\s+){12}-?\d{1,3}(?:,\d{3})*\.\d{2})$"
 )
@@ -1317,7 +1388,20 @@ def _converter_formato_d(pdf, avisos: list[str]):
             if secao != "V":
                 continue
             m = _LINHA_D_RE.match(s)
+            if not m and _US_COLADO_RE.search(s):
+                # Dois valores podem sair grudados quando um mês é mais largo
+                # (dezembro, com o 13º somado): "3,614.0411,786.39". Sem
+                # separar, a linha não casa e a rubrica inteira sumiria sem
+                # aviso. Só vale a separação se ela fizer a linha casar.
+                m = _LINHA_D_RE.match(_US_COLADO_RE.sub(r"\1 ", s))
             if not m:
+                if s[:1].isdigit() and len(_US_NUM_RE.findall(s)) >= 8:
+                    # Cara de rubrica, mas não fecha os 13 valores: em vez de
+                    # sumir calado (como acontecia no layout C), avisa.
+                    avisos.append(
+                        f"Ano {ano}: uma linha de Vantagens não pôde ser lida e ficou "
+                        f"de FORA da planilha - confira esta ficha contra o PDF."
+                    )
                 # Continuação do nome da rubrica anterior (ex.: "AP.AT.SAUDE").
                 if (
                     ult_col
@@ -1935,15 +2019,15 @@ def _converter_formato_vitoria(pdf, avisos: list[str]):
             if coluna not in ordem:
                 ordem.append(coluna)
             for w in grupo:
-                if not VALOR_RE.match(w["text"]):
-                    continue
-                xc = (w["x0"] + w["x1"]) / 2
-                if xc > x_max:
-                    continue
-                idx = min(centros, key=lambda i: abs(centros[i] - xc))
-                if abs(centros[idx] - xc) > 20:
-                    continue
-                dados[MESES[idx]][coluna] = dados[MESES[idx]].get(coluna, 0.0) + parse_valor(w["text"])
+                for texto_valor, xc in _valores_da_palavra(w):
+                    if xc > x_max:
+                        continue
+                    idx = min(centros, key=lambda i: abs(centros[i] - xc))
+                    if abs(centros[idx] - xc) > 20:
+                        continue
+                    dados[MESES[idx]][coluna] = (
+                        dados[MESES[idx]].get(coluna, 0.0) + parse_valor(texto_valor)
+                    )
 
         if ordem:
             blocos.append({
