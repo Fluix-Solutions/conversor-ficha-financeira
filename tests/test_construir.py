@@ -73,6 +73,26 @@ def test_zip_tem_uma_pasta_raiz_com_o_lancador(tmp_path):
     assert "Conversor de Ficha Financeira/python/python.exe" in nomes
 
 
+def test_zip_recusa_caminho_longo_demais(tmp_path):
+    """Caminho comprido estoura o limite do Windows na hora de extrair (UAT:
+    erro 0x80010135). O build falha antes de publicar."""
+    alvo = tmp_path / cp.NOME
+    fundo = alvo / ("a" * 60) / ("b" * 60)
+    fundo.mkdir(parents=True)
+    entrada = f"{cp.NOME}/{'a' * 60}/{'b' * 60}/"
+    nome = "c" * (cp.LIMITE_CAMINHO + 1 - len(entrada))
+    (fundo / nome).write_text("x")
+
+    with pytest.raises(RuntimeError) as e:
+        cp.zipar(alvo, tmp_path / "grande.zip")
+    assert nome in str(e.value)
+    assert str(cp.LIMITE_CAMINHO + 1) in str(e.value)
+
+    (fundo / nome).rename(fundo / nome[:-1])  # agora com o limite exato
+    cp.zipar(alvo, tmp_path / "ok.zip")
+    assert max(len(n) for n in zipfile.ZipFile(tmp_path / "ok.zip").namelist()) == cp.LIMITE_CAMINHO
+
+
 def test_registro_lista_pacotes_com_versao(tmp_path, capsys):
     z = tmp_path / "x.zip"
     z.write_bytes(b"zip")
@@ -140,6 +160,12 @@ def test_main_monta_instala_do_lock_e_registra_o_zip(tmp_path, monkeypatch, caps
                  "Conversor.bat", "LEIA-ME.txt", "python/python.exe"]:
         assert (alvo / item).is_file(), item
     assert "..\n" in (alvo / "python" / "python312._pth").read_text()
+
+    # WIN-28: o LEIA-ME explica os dois erros que o UAT encontrou.
+    leiame = (alvo / "LEIA-ME.txt").read_text(encoding="utf-8")
+    for termo in ("Desbloquear", "Controle de Aplicativo Inteligente",
+                  "Caminho muito longo", "Downloads"):
+        assert termo in leiame, termo
 
     # WIN-12 + WIN-10: zip com a pasta raiz e registro no log.
     nomes = zipfile.ZipFile(arq_zip).namelist()

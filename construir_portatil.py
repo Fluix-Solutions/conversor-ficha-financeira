@@ -42,6 +42,8 @@ NOME = "Conversor de Ficha Financeira"
 # Versões exatas + hashes das dependências (win_amd64/cp312). Para atualizar,
 # rode no Mac o comando que está no cabeçalho do próprio arquivo.
 LOCK = RAIZ / "requirements-windows.lock"
+# Maior caminho aceito dentro do zip (ver `zipar`). Hoje o maior real tem 155.
+LIMITE_CAMINHO = 160
 
 # O que roda na máquina de destino. `ui/` e `app_web.py` (janela antiga) e o
 # `app.py` (Tkinter, que o Python embutido nem tem) ficam de fora.
@@ -71,6 +73,16 @@ FICHA ESCANEADA (PDF que e so imagem)
 PRIVACIDADE
   Tudo e processado neste computador. Nenhum arquivo e enviado para a
   internet.
+
+SE O WINDOWS BLOQUEAR
+  "O Controle de Aplicativo Inteligente bloqueou um arquivo que pode nao ser
+  seguro": e por causa da marca de "baixado da internet" no arquivo .bat.
+  Apague esta pasta, clique com o botao direito no ZIP > Propriedades >
+  marque "Desbloquear" > OK, e extraia de novo.
+
+  "Caminho muito longo" (erro 0x80010135) ao extrair: o zip esta numa pasta
+  funda demais (por exemplo, a pasta do WhatsApp). Mova o ZIP para a pasta
+  Downloads e extraia de la.
 
 SE NAO ABRIR
   Requer Windows 10/11 atualizado (.NET Framework e WebView2 do Edge).
@@ -128,11 +140,23 @@ def comandos_instalar(python_exe: Path, tmp: Path) -> list[list[str]]:
 
 def zipar(alvo: Path, destino: Path) -> None:
     """Zip com uma única pasta raiz (o nome de `alvo`) — ao descompactar, o
-    usuário acha `Conversor.bat` logo dentro dela."""
+    usuário acha `Conversor.bat` logo dentro dela.
+
+    Recusa caminho comprido: o Windows corta em 260 caracteres e o "Extrair
+    tudo" ainda põe uma pasta com o nome do zip na frente. Com o limite abaixo
+    sobram ~50 caracteres para a pasta onde o usuário guardou o zip (Downloads
+    usa ~26). Passar disso = extração falha com 0x80010135 na máquina dele."""
+    entradas = [(f, f.relative_to(alvo.parent).as_posix())
+                for f in sorted(alvo.rglob("*")) if f.is_file()]
+    maior = max((e for _f, e in entradas), key=len, default="")
+    if len(maior) > LIMITE_CAMINHO:
+        raise RuntimeError(
+            f"caminho longo demais no zip ({len(maior)} caracteres, limite "
+            f"{LIMITE_CAMINHO}): {maior}"
+        )
     with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as zf:
-        for f in sorted(alvo.rglob("*")):
-            if f.is_file():
-                zf.write(f, f.relative_to(alvo.parent).as_posix())
+        for f, entrada in entradas:
+            zf.write(f, entrada)
 
 
 def registrar(python_exe: Path, arq_zip: Path) -> None:

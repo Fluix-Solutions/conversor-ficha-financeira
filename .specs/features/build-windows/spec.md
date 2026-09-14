@@ -187,8 +187,8 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | WIN-24 | P1: Build verificado | T13, T15 | Verified |
 | WIN-25 | P1: Dependências travadas | T14 | Verified |
 | WIN-26 | P1: Publicação por tag | T17 | Implementing |
-| WIN-27 | P1: Publicação por tag | T18 | Pending |
-| WIN-28 | P1: Publicação por tag | T18 | Pending |
+| WIN-27 | P1: Publicação por tag | T18 | Implementing |
+| WIN-28 | P1: Publicação por tag | T18 | Implementing |
 
 **Coverage:** 28 total, 28 mapped to tasks, 0 unmapped
 

@@ -556,8 +556,8 @@ T17 → T18 → T19
 
 **Done when**:
 
-- [ ] `tests/test_construir.py`: entrada com 161 caracteres → `RuntimeError` citando a entrada e o tamanho; com 160 → zip gerado; o `LEIA-ME.txt` da pasta montada pelo `main` contém `Desbloquear`, `Controle de Aplicativo Inteligente` e `Caminho muito longo`
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [x] `tests/test_construir.py`: entrada com 161 caracteres → `RuntimeError` citando a entrada e o tamanho; com 160 → zip gerado; o `LEIA-ME.txt` da pasta montada pelo `main` contém `Desbloquear`, `Controle de Aplicativo Inteligente` e `Caminho muito longo`
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
 - [ ] Gate CI: PR verde (o maior caminho real é 155)
 
 **Tests**: unit
