@@ -108,9 +108,24 @@ verba são **somados**.
 ## Levar para outros computadores (pasta portátil)
 
 A versão Windows é uma **pasta portátil** (~360 MB) com um **Python embutido**
-e todas as dependências dentro. Na outra máquina: descompacte o zip e dê
-**duplo clique em `Conversor.bat`** — não se instala nada, e funciona sem
-internet, com OCR em velocidade plena (~73 s por ficha escaneada).
+e todas as dependências dentro. Não se instala nada, e funciona sem internet,
+com OCR em velocidade plena (~73 s por ficha escaneada).
+
+### Instalar na máquina do usuário (validado com Smart App Control ligado)
+
+1. Deixe o zip numa pasta de caminho curto, como **Downloads**. Extraindo de
+   uma pasta funda (a do WhatsApp, por exemplo) o Windows recusa com
+   **"Caminho muito longo"** (erro `0x80010135`).
+2. Botão direito no zip → **Propriedades** → marque **Desbloquear** → **OK**.
+   Sem isso o Windows 11 mostra **"O Controle de Aplicativo Inteligente
+   bloqueou um arquivo que pode não ser seguro"** e não deixa liberar: o
+   `.bat` está na lista de tipos que o SAC bloqueia quando vêm da internet, e
+   um `.bat` não pode ser assinado.
+3. Botão direito → **Extrair tudo** → **Extrair**.
+4. Abra a pasta `Conversor de Ficha Financeira` e dê **duplo clique em
+   `Conversor.bat`**.
+
+Esses dois passos estão nas notas de cada Release e no `LEIA-ME.txt` da pasta.
 
 ### Gerar uma versão (de qualquer computador, inclusive Mac)
 
@@ -153,8 +168,8 @@ O que o workflow faz, e por que dá para confiar no zip:
 - só publica se tudo passar. Uma Release que já existe **nunca** é
   sobrescrita — para publicar de novo, suba o `VERSAO`.
 
-Antes de mandar a primeira versão a alguém, teste o zip **baixado da Release**
-numa máquina com Smart App Control ligado.
+- recusa o zip se algum caminho interno passar de 160 caracteres, para a
+  extração não falhar na máquina do usuário.
 
 ### Atualizar as dependências da pasta
 

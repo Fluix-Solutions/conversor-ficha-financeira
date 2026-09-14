@@ -191,8 +191,18 @@ roda (ele executa o `python.exe` da pasta). O build oficial é
 - Saída de subprocesso no Windows vem na página de código do console e o
   Python embutido (modo isolado pelo `._pth`) **ignora `PYTHONIOENCODING`** →
   o que o alvo imprime para o teste ler é JSON só em ASCII.
-- **Não testado ainda**: Smart App Control com o zip **baixado** da Release
-  (Mark-of-the-Web). Testar numa máquina com SAC ligado antes de divulgar.
+- **UAT com Smart App Control (2026-09-11)**: o zip baixado funciona, mas só
+  com dois passos do usuário, agora nas notas da Release e no `LEIA-ME.txt`:
+  1. **Desbloquear** o zip (Propriedades) antes de extrair. O `.bat` está na
+     lista de tipos que o SAC bloqueia quando trazem o Mark-of-the-Web, e o
+     diálogo NÃO oferece "executar assim mesmo". `.bat` não pode ser assinado;
+     acabar com esse passo exige um lançador assinado (ideia adiada).
+  2. Extrair a partir de uma pasta curta (**Downloads**). Da pasta do WhatsApp
+     deu `0x80010135: Caminho muito longo`. Por isso `zipar` recusa entrada
+     acima de `LIMITE_CAMINHO` (160; a maior real tem 155) — sobram ~50
+     caracteres para a pasta do usuário, já contando a pasta que o "Extrair
+     tudo" cria com o nome do zip.
+  Com isso, converteu ficha escaneada na máquina do usuário.
 
 ## Empacotamento (.exe) — ABANDONADO (2026-09-09)
 

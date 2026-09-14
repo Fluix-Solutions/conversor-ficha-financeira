@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/build-windows/design.md`
-**Status**: In Progress (achados do UAT)
+**Status**: Done (UAT aprovado; aguardando CI, verificação e publicação)
 
 ---
 
@@ -582,9 +582,9 @@ T17 → T18 → T19
 
 **Done when**:
 
-- [ ] README: passo a passo de instalação e os dois erros
-- [ ] CLAUDE.md: UAT com SAC (bloqueio do `.bat` com MotW; Desbloquear resolve; caminho longo a partir da pasta do WhatsApp) e o limite de 160
-- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [x] README: passo a passo de instalação e os dois erros
+- [x] CLAUDE.md: UAT com SAC (bloqueio do `.bat` com MotW; Desbloquear resolve; caminho longo a partir da pasta do WhatsApp) e o limite de 160
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
 
 **Tests**: none
 **Gate**: build
