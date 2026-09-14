@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 11,
+  "next_id": 12,
   "lessons": [
     {
       "id": "L-001",
@@ -184,6 +184,25 @@
       ],
       "created": "2026-09-14T12:47:18Z",
       "last_seen": "2026-09-14T12:47:18Z"
+    },
+    {
+      "id": "L-011",
+      "key": "surviving_mutant::para provar que uma acao cancelada nao grava nada intercepte toda gravacao e download em qualquer caminho em vez de listar uma pasta que o codigo nunca recebeu",
+      "text": "Para provar que uma ação cancelada não grava nada, intercepte toda gravação e download em qualquer caminho, em vez de listar uma pasta que o código nunca recebeu.",
+      "signal": "surviving_mutant",
+      "scope": "tests/e2e",
+      "status": "candidate",
+      "features": [
+        "json-desktop"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M7 app_desktop.py:106-107 / tests/test_desktop.py:82 (tests/e2e)",
+        "M11 rodada 2 app_desktop.py:106-107 / tests/_salvar_alvo.py:65-68 (tests/e2e)"
+      ],
+      "created": "2026-09-14T14:31:35Z",
+      "last_seen": "2026-09-14T14:38:13Z"
     }
   ]
 }

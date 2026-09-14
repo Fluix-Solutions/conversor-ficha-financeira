@@ -44,11 +44,17 @@ Flask. Rotas: `/` e assets de `web/`; `GET /api/origens`, `GET /api/versao`.
 
 **Conversão em FILA** (2026-09-11), porque OCR leva 1-2 min e não cabe numa
 requisição HTTP aberta (proxy/navegador/queda de rede matariam o trabalho):
-- `POST /api/converter` (multipart `pdf` + `origem`) → **202** `{"job": id}`,
+- `POST /api/converter` (multipart `pdf` + `origem` + `formato` `xlsx`|`json`,
+  padrão xlsx) → **202** `{"job": id}`,
   dispara uma `threading.Thread` e retorna na hora;
 - `GET /api/job/<id>` → `processando` (+ `etapa`/`atual`/`total`), `pronto`
   (+ `resumo`) ou `erro`;
-- `GET /api/job/<id>/arquivo` → o `.xlsx` via `send_file`.
+- `GET /api/job/<id>/arquivo` → o `.xlsx` ou `.json` via `send_file`.
+
+**Saída JSON** (`converter(..., formato="json")`, CLI `-f json` ou `-o x.json`):
+mesma informação da planilha — `origem`, `layout`, `anos`, `contratos`,
+`multiplos_blocos`, `avisos`, `colunas` e `proventos` (uma linha
+`{"Ano", "Mês", "<rubrica>": valor}` por mês).
 
 O andamento vem do callback `progresso(etapa, atual, total)` de
 `converter()` — ligado nos 3 laços lentos (`_converter_ocr`,
@@ -108,6 +114,11 @@ Motivo de existir: OCR local leva ~72 s; no Railway (3 vCPU) leva ~14 min.
   resultado do `evaluate_js` causa o mesmo despejo de erro.
 - `CONVERSOR_SENHA` é removida do ambiente ANTES de importar o `server`
   (o módulo lê a senha no import), senão o app pediria login local.
+- **`Api.salvar` decide o formato pela extensão de `arquivo_nome`** (vem do
+  servidor) e usa `FILTROS`. Na v1.1 ele forçava `.xlsx`: o JSON saía como
+  `ficha.json.xlsx`, abria no Excel e o usuário via "arquivo corrompido".
+  Corrigido na v1.2; só a planilha abre sozinha depois de salvar.
+  `tests/test_desktop.py` (e2e) cobre isso no Python da pasta.
 
 `Conversor.bat` aponta para cá. `app_web.py` + `ui/` = janela antiga, reserva.
 

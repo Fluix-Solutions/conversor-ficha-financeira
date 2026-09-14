@@ -20,11 +20,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/build-windows/` — concluída e publicada
-- **Phase / Task**: T1-T19 + correções; Verifier rodada 4 = PASS
-- **Completed**: PR #1 mergeado na `main` (0724aa4); Release **v1.1** publicada com o zip (153,5 MB, sha256 23eff6c9…1c66); provas de produção nos runs 34846003592 (sem publicar), 34846236087 (publicou), 34846508283 (recusou republicar)
+- **Feature**: `.specs/features/json-desktop/` — concluída localmente (Verifier rodada 2 = PASS)
+- **Phase / Task**: Execute concluído (spec b9f4995, fix aab8c81, versão 1.2 7ed3710, teste 22fcded, docs)
+- **Completed**: JSONDESK-01..08. Causa do "JSON corrompeu" (relato 2026-09-14, app do zip Windows): `Api.salvar` forçava `.xlsx` e gravava o JSON como `ficha.json.xlsx`. `server.VERSAO = "1.2"`
 - **In-progress** (file:line): nenhum
-- **Next step**: próxima sessão = investigar a **geração de JSON** (pedida para a v1.2). Relato do usuário em 2026-09-14: "o JSON acho que corrompeu porque não está fazendo" — ainda sem detalhe do que é o JSON, de quem o consome nem da mensagem de erro. Antes de especificar, levantar: (1) qual programa lê o JSON e se ele já existe hoje fora deste repositório; (2) um exemplo de JSON que funciona e um que "corrompeu"; (3) a mensagem/tela do erro; (4) se o JSON substitui ou acompanha o `.xlsx`, e se vale para Serra e Estado, inclusive ficha escaneada. Nada disso existe no código atual: hoje a saída é só `.xlsx` (aba Proventos). Ideias adiadas do build Windows seguem em `.specs/features/build-windows/context.md`
-- **Blockers**: nenhum
-- **Uncommitted files**: nenhum
-- **Branch**: `main`
+- **Next step**: com ok do usuário, `git push` da `main` e publicar a Release v1.2 ("Run workflow" com `publicar` ou tag `v1.2`); depois o usuário testa JSON no app do zip novo
+- **Blockers**: push/Release exigem ok explícito do usuário
+- **Uncommitted files**: nenhum (pastas de skill `.agents/`, `.claude/skills/`, `.cursor/`, `.windsurf/` seguem fora do git)
+- **Branch**: `main` (5 commits à frente de `origin/main`, sem push)

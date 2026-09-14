@@ -74,6 +74,12 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: run 34843217833 tests/test_release.py::test_cli_notas_calcula_o_sha256_do_zip (WIN-26; release.py:112-116) (cli)
 - last seen: 2026-09-14T12:47:18Z
 
+### L-011 - Para provar que uma ação cancelada não grava nada, intercepte toda gravação e download em qualquer caminho, em vez de listar uma pasta que o código nunca recebeu.
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `tests/e2e` · harmful: 0
+- features: json-desktop
+- evidence: M7 app_desktop.py:106-107 / tests/test_desktop.py:82 (tests/e2e) (+1 more)
+- last seen: 2026-09-14T14:38:13Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

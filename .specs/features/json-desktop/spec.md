@@ -6,9 +6,9 @@ A v1.1 já gera JSON (motor, CLI e tela web, commit `6c0cfea`), mas no app de de
 
 ## Goals
 
-- [ ] No app de desktop, escolher JSON e salvar produz um arquivo `.json` válido com os proventos da ficha.
-- [ ] O build Windows falha se o caminho "converter em JSON → salvar no desktop" quebrar de novo.
-- [ ] A correção sai numa versão nova (`1.2`), já que a Release v1.1 não é sobrescrita.
+- [x] No app de desktop, escolher JSON e salvar produz um arquivo `.json` válido com os proventos da ficha.
+- [x] O build Windows falha se o caminho "converter em JSON → salvar no desktop" quebrar de novo.
+- [x] A correção sai numa versão nova (`1.2`), já que a Release v1.1 não é sobrescrita.
 
 ## Out of Scope
 
@@ -98,14 +98,14 @@ A v1.1 já gera JSON (motor, CLI e tela web, commit `6c0cfea`), mas no app de de
 
 | Requirement ID | Story | Phase | Status |
 | -------------- | ----- | ----- | ------ |
-| JSONDESK-01 | P1: Salvar JSON — AC 1, 2, edge `.JSON` | Execute | Implementing |
-| JSONDESK-02 | P1: Salvar JSON — AC 3 | Execute | Implementing |
-| JSONDESK-03 | P1: Salvar JSON — AC 4 | Execute | Implementing |
-| JSONDESK-04 | P1: Salvar JSON — AC 5 | Execute | Implementing |
-| JSONDESK-05 | P1: Planilha — AC 1, 2 | Execute | Implementing |
-| JSONDESK-06 | P1: Build — AC 1 | Execute | Implementing |
-| JSONDESK-07 | P1: Build — AC 2 | Execute | Implementing |
-| JSONDESK-08 | Edge: cancelar o "Salvar como" não baixa nem grava nada | Execute | Implementing |
+| JSONDESK-01 | P1: Salvar JSON — AC 1, 2, edge `.JSON` | Execute | Verified |
+| JSONDESK-02 | P1: Salvar JSON — AC 3 | Execute | Verified |
+| JSONDESK-03 | P1: Salvar JSON — AC 4 | Execute | Verified |
+| JSONDESK-04 | P1: Salvar JSON — AC 5 | Execute | Verified |
+| JSONDESK-05 | P1: Planilha — AC 1, 2 | Execute | Verified |
+| JSONDESK-06 | P1: Build — AC 1 | Execute | Verified |
+| JSONDESK-07 | P1: Build — AC 2 | Execute | Verified |
+| JSONDESK-08 | Edge: cancelar o "Salvar como" não baixa nem grava nada | Execute | Verified |
 
 **Coverage:** 8 total, 8 mapped to steps, 0 unmapped
 
@@ -113,5 +113,5 @@ A v1.1 já gera JSON (motor, CLI e tela web, commit `6c0cfea`), mas no app de de
 
 ## Success Criteria
 
-- [ ] `pytest tests -m e2e` passa no Mac e no workflow Windows com os novos testes.
-- [ ] Arquivo JSON salvo pelo desktop abre com `json.load` e bate valor a valor com a ficha fictícia.
+- [ ] `pytest tests -m e2e` passa no Mac e no workflow Windows com os novos testes. (Mac: 46 passed, 2026-09-14; Windows: pendente, roda no próximo workflow)
+- [x] Arquivo JSON salvo pelo desktop abre com `json.load` e bate valor a valor com a ficha fictícia.
