@@ -1,7 +1,7 @@
 """
 Monta a PASTA PORTÁTIL do Conversor para levar a outros computadores.
 
-    python construir_portatil.py [destino]
+    python construir_portatil.py [destino] [--zip arquivo.zip]
 
 Gera `portatil/Conversor de Ficha Financeira/`, com um Python embutido e todas
 as dependências dentro. Na máquina de destino não se instala nada: copia a
@@ -18,6 +18,8 @@ Requisitos na máquina de destino (presentes num Windows 10/11 atualizado):
 """
 from __future__ import annotations
 
+import argparse
+import hashlib
 import re
 import shutil
 import subprocess
@@ -28,10 +30,20 @@ from pathlib import Path
 
 PY = "3.12.9"
 URL_EMBED = f"https://www.python.org/ftp/python/{PY}/python-{PY}-embed-amd64.zip"
+# SHA-256 do python-3.12.9-embed-amd64.zip oficial (o MD5 bate com o que o
+# python.org publica). O zip vira binário distribuído a terceiros: se o
+# download vier diferente, o build para antes de extrair. Trocar o PY exige
+# trocar este hash.
+SHA256_EMBED = "615861fb801e8b04c847598db4e1e46e4b046295017caa37cb5486dde72b5865"
 URL_GETPIP = "https://bootstrap.pypa.io/get-pip.py"
 
 RAIZ = Path(__file__).resolve().parent
 NOME = "Conversor de Ficha Financeira"
+# Versões exatas + hashes das dependências (win_amd64/cp312). Para atualizar,
+# rode no Mac o comando que está no cabeçalho do próprio arquivo.
+LOCK = RAIZ / "requirements-windows.lock"
+# Maior caminho aceito dentro do zip (ver `zipar`). Hoje o maior real tem 155.
+LIMITE_CAMINHO = 160
 
 # O que roda na máquina de destino. `ui/` e `app_web.py` (janela antiga) e o
 # `app.py` (Tkinter, que o Python embutido nem tem) ficam de fora.
@@ -62,6 +74,16 @@ PRIVACIDADE
   Tudo e processado neste computador. Nenhum arquivo e enviado para a
   internet.
 
+SE O WINDOWS BLOQUEAR
+  "O Controle de Aplicativo Inteligente bloqueou um arquivo que pode nao ser
+  seguro": e por causa da marca de "baixado da internet" no arquivo .bat.
+  Apague esta pasta, clique com o botao direito no ZIP > Propriedades >
+  marque "Desbloquear" > OK, e extraia de novo.
+
+  "Caminho muito longo" (erro 0x80010135) ao extrair: o zip esta numa pasta
+  funda demais (por exemplo, a pasta do WhatsApp). Mova o ZIP para a pasta
+  Downloads e extraia de la.
+
 SE NAO ABRIR
   Requer Windows 10/11 atualizado (.NET Framework e WebView2 do Edge).
   Se a janela nao aparecer, rode "python\\python.exe app_desktop.py" pelo
@@ -75,8 +97,92 @@ def _baixar(url: str, destino: Path) -> None:
         shutil.copyfileobj(r, f)
 
 
+def conferir_sha256(arquivo: Path, esperado: str) -> None:
+    real = hashlib.sha256(arquivo.read_bytes()).hexdigest()
+    if real != esperado:
+        raise RuntimeError(
+            f"SHA-256 de {arquivo.name} nao confere: veio {real}, esperado "
+            f"{esperado}. Apague {arquivo} e rode de novo; se repetir, o "
+            f"download nao e o oficial."
+        )
+
+
+def bloco_do_lock(nome: str) -> str:
+    """As linhas de um pacote no lock (`nome==versão` + seus `--hash`)."""
+    linhas, dentro = [], False
+    for ln in LOCK.read_text(encoding="utf-8").splitlines():
+        if ln.startswith(f"{nome}=="):
+            dentro = True
+        elif dentro and not ln[:1].isspace():
+            break
+        if dentro:
+            linhas.append(ln)
+    if not linhas:
+        raise RuntimeError(f"{nome} nao esta em {LOCK.name}")
+    return "\n".join(linhas) + "\n"
+
+
+def comandos_instalar(python_exe: Path, tmp: Path) -> list[list[str]]:
+    """pip do Python da pasta instalando só o que está no lock, com hash.
+
+    Duas etapas porque o proxy-tools (do pywebview) só existe como código-
+    fonte e precisa ser compilado. O isolamento de build do pip entrega o
+    setuptools por PYTHONPATH, que o Python embutido ignora (._pth) — dá
+    `Cannot import 'setuptools.build_meta'`. Então: 1º o setuptools do lock,
+    depois tudo com --no-build-isolation, usando esse setuptools."""
+    pre = tmp / "setuptools.txt"
+    pre.write_text(bloco_do_lock("setuptools"), encoding="utf-8")
+    base = [str(python_exe), "-m", "pip", "install", "--no-warn-script-location",
+            "--require-hashes"]
+    return [base + ["-r", str(pre)],
+            base + ["--no-build-isolation", "-r", str(LOCK)]]
+
+
+def zipar(alvo: Path, destino: Path) -> None:
+    """Zip com uma única pasta raiz (o nome de `alvo`) — ao descompactar, o
+    usuário acha `Conversor.bat` logo dentro dela.
+
+    Recusa caminho comprido: o Windows corta em 260 caracteres e o "Extrair
+    tudo" ainda põe uma pasta com o nome do zip na frente. Com o limite abaixo
+    sobram ~50 caracteres para a pasta onde o usuário guardou o zip (Downloads
+    usa ~26). Passar disso = extração falha com 0x80010135 na máquina dele."""
+    entradas = [(f, f.relative_to(alvo.parent).as_posix())
+                for f in sorted(alvo.rglob("*")) if f.is_file()]
+    maior = max((e for _f, e in entradas), key=len, default="")
+    if len(maior) > LIMITE_CAMINHO:
+        raise RuntimeError(
+            f"caminho longo demais no zip ({len(maior)} caracteres, limite "
+            f"{LIMITE_CAMINHO}): {maior}"
+        )
+    with zipfile.ZipFile(destino, "w", zipfile.ZIP_DEFLATED) as zf:
+        for f, entrada in entradas:
+            zf.write(f, entrada)
+
+
+def registrar(python_exe: Path, arq_zip: Path) -> None:
+    """Deixa no log o que foi para dentro do zip: pacotes com versão (lidos
+    pelo Python da pasta), tamanho e SHA-256."""
+    lista = subprocess.run(
+        [str(python_exe), "-c",
+         "import importlib.metadata as m\n"
+         "for d in sorted(m.distributions(), key=lambda d: d.metadata['Name'].lower()):\n"
+         "    print(f\"{d.metadata['Name']}=={d.version}\")"],
+        capture_output=True, text=True, check=True,
+    ).stdout
+    print("pacotes na pasta:")
+    print(lista, end="")
+    sha = hashlib.sha256(arq_zip.read_bytes()).hexdigest()
+    print(f"zip: {arq_zip.name}")
+    print(f"tamanho do zip: {arq_zip.stat().st_size / 1e6:.1f} MB")
+    print(f"sha256: {sha}")
+
+
 def main() -> int:
-    saida = Path(sys.argv[1]) if len(sys.argv) > 1 else RAIZ / "portatil"
+    ap = argparse.ArgumentParser(description="Monta a pasta portatil do Conversor.")
+    ap.add_argument("destino", nargs="?", type=Path, default=RAIZ / "portatil")
+    ap.add_argument("--zip", type=Path, help="gera tambem este .zip da pasta")
+    args = ap.parse_args()
+    saida = args.destino
     alvo = saida / NOME
     pydir = alvo / "python"
 
@@ -93,6 +199,7 @@ def main() -> int:
     z = tmp / "python-embed.zip"
     if not z.exists():
         _baixar(URL_EMBED, z)
+    conferir_sha256(z, SHA256_EMBED)
     with zipfile.ZipFile(z) as zf:
         zf.extractall(pydir)
 
@@ -126,11 +233,8 @@ def main() -> int:
 
     # 3. dependências
     print("3/5 dependencias (demora — sao ~400 MB)")
-    subprocess.run(
-        [str(pydir / "python.exe"), "-m", "pip", "install",
-         "--no-warn-script-location", "-r", str(RAIZ / "requirements-desktop.txt")],
-        check=True,
-    )
+    for cmd in comandos_instalar(pydir / "python.exe", tmp):
+        subprocess.run(cmd, check=True)
 
     # 4. aplicação
     print("4/5 aplicacao")
@@ -155,7 +259,7 @@ def main() -> int:
     print("6/6 conferindo a pasta gerada")
     codigo = """
 import sys
-mods = ['pdfplumber', 'openpyxl', 'fitz', 'flask', 'webview', 'cv2',
+mods = ['pdfplumber', 'openpyxl', 'pymupdf', 'flask', 'webview', 'cv2',
         'onnxruntime', 'rapidocr_onnxruntime', 'clr', 'converter', 'server']
 ruins = []
 for m in mods:
@@ -182,6 +286,9 @@ print('  tudo importa e o OCR carrega')
     tam = sum(f.stat().st_size for f in alvo.rglob("*") if f.is_file())
     print(f"\nPRONTO: {alvo}")
     print(f"tamanho: {tam / 1e6:.0f} MB")
+    if args.zip:
+        zipar(alvo, args.zip)
+        registrar(pydir / "python.exe", args.zip)
     print("Teste com um duplo clique no Conversor.bat de dentro dessa pasta.")
     return 0
 

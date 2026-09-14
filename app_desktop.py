@@ -12,7 +12,7 @@ Por que usar o desktop em vez do site: o OCR de ficha escaneada roda na sua
 máquina. Medido: ~72 s aqui contra ~14 min na instância do Railway (3 vCPU).
 
 Diferença em relação ao site, e a razão de este arquivo existir:
-o `web/app.js` baixa o .xlsx por um link do navegador, o que não funciona bem
+o `web/app.js` baixa o .xlsx/.json por um link do navegador, o que não funciona bem
 numa janela pywebview. Aqui a função `baixar()` é substituída depois que a
 página carrega (sem tocar no arquivo), passando a abrir um "Salvar como"
 nativo. Nada em `web/` precisa saber que está rodando no desktop.
@@ -37,6 +37,10 @@ os.environ.pop("CONVERSOR_SENHA", None)
 import server  # noqa: E402  (depende do ajuste de ambiente acima)
 
 TITULO = "Conversor de Ficha Financeira"
+
+# Filtro do "Salvar como" por extensão de saída (formato exigido pelo
+# pywebview: "Descrição (*.ext)").
+FILTROS = {".xlsx": "Planilha Excel (*.xlsx)", ".json": "JSON (*.json)"}
 
 # Troca o download do navegador por um "Salvar como" nativo. `baixar` é uma
 # função global do web/app.js, então dá para substituí-la por fora.
@@ -87,16 +91,23 @@ class Api:
         self._window = None
 
     def salvar(self, job: str, nome: str):
+        # O formato vem na extensão do nome dado pelo servidor. Forçar .xlsx
+        # aqui gravava o JSON como "ficha.json.xlsx" e o Excel o dava por
+        # corrompido (v1.1).
+        nome = nome or "ficha.xlsx"
+        ext = Path(nome).suffix.lower()
+        if ext not in FILTROS:
+            ext = ".xlsx"
         destino = self._window.create_file_dialog(
             webview.SAVE_DIALOG,
-            save_filename=nome or "ficha.xlsx",
-            file_types=("Planilha Excel (*.xlsx)",),
+            save_filename=nome,
+            file_types=(FILTROS[ext],),
         )
         if not destino:
             return {"cancelado": True}
         destino = destino if isinstance(destino, str) else destino[0]
-        if not destino.lower().endswith(".xlsx"):
-            destino += ".xlsx"
+        if not destino.lower().endswith(ext):
+            destino += ext
         try:
             with urllib.request.urlopen(
                 f"{self._base}/api/job/{job}/arquivo", timeout=60
@@ -107,10 +118,14 @@ class Api:
             return {"erro": "A conversão expirou. Converta o PDF de novo."}
         except Exception as e:  # noqa: BLE001
             return {"erro": f"Não consegui salvar o arquivo: {e}"}
-        try:
-            os.startfile(destino)  # Windows: abre a planilha pronta
-        except Exception:  # noqa: BLE001
-            pass
+        # Só a planilha abre sozinha: o JSON é para o sistema de cálculo
+        # importar, e no Windows um .json sem programa associado abriria o
+        # diálogo "Como deseja abrir?".
+        if ext == ".xlsx":
+            try:
+                os.startfile(destino)  # Windows: abre a planilha pronta
+            except Exception:  # noqa: BLE001
+                pass
         return {"ok": True, "caminho": destino}
 
 
