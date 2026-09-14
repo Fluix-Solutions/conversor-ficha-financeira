@@ -20,11 +20,11 @@
 
 ## Handoff
 
-- **Feature**: `.specs/features/json-desktop/` — concluída localmente (Verifier rodada 2 = PASS)
-- **Phase / Task**: Execute concluído (spec b9f4995, fix aab8c81, versão 1.2 7ed3710, teste 22fcded, docs)
-- **Completed**: JSONDESK-01..08. Causa do "JSON corrompeu" (relato 2026-09-14, app do zip Windows): `Api.salvar` forçava `.xlsx` e gravava o JSON como `ficha.json.xlsx`. `server.VERSAO = "1.2"`
+- **Feature**: `.specs/features/json-desktop/` — concluída e publicada (Verifier rodada 2 = PASS)
+- **Phase / Task**: Execute concluído; Release **v1.2** publicada (run 34858280003, tag no commit b6a8dba)
+- **Completed**: JSONDESK-01..08. Causa do "JSON corrompeu" (relato 2026-09-14, app do zip Windows): `Api.salvar` forçava `.xlsx` e gravava o JSON como `ficha.json.xlsx`. No Windows: 33 unitários + 13 e2e passaram com o `python.exe` da pasta (8 de `test_desktop.py`). Zip `Conversor-de-Ficha-Financeira-v1.2-windows-x64.zip`, 153,5 MB, sha256 907b32e9…3070
 - **In-progress** (file:line): nenhum
-- **Next step**: com ok do usuário, `git push` da `main` e publicar a Release v1.2 ("Run workflow" com `publicar` ou tag `v1.2`); depois o usuário testa JSON no app do zip novo
-- **Blockers**: push/Release exigem ok explícito do usuário
+- **Next step**: UAT do usuário — baixar o zip v1.2, desbloquear, extrair em Downloads, converter uma ficha escolhendo JSON e confirmar que sai `.json` e o sistema de cálculo importa
+- **Blockers**: nenhum
 - **Uncommitted files**: nenhum (pastas de skill `.agents/`, `.claude/skills/`, `.cursor/`, `.windsurf/` seguem fora do git)
-- **Branch**: `main` (5 commits à frente de `origin/main`, sem push)
+- **Branch**: `main` (sincronizada com `origin/main`)

@@ -113,5 +113,5 @@ A v1.1 já gera JSON (motor, CLI e tela web, commit `6c0cfea`), mas no app de de
 
 ## Success Criteria
 
-- [ ] `pytest tests -m e2e` passa no Mac e no workflow Windows com os novos testes. (Mac: 46 passed, 2026-09-14; Windows: pendente, roda no próximo workflow)
+- [x] `pytest tests -m e2e` passa no Mac e no workflow Windows com os novos testes. (Mac: 46 passed; Windows: run 34858280003, 13 e2e passed com o `python.exe` da pasta, os 8 de `test_desktop.py` inclusos — 2026-09-14)
 - [x] Arquivo JSON salvo pelo desktop abre com `json.load` e bate valor a valor com a ficha fictícia.
