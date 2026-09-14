@@ -66,9 +66,19 @@ def nome_zip(tag: str) -> str:
 def notas_release(tag: str, sha256: str) -> str:
     return f"""Conversor de Ficha Financeira {tag} para Windows (pasta portátil).
 
-## Como usar
-Descompacte o zip e dê duplo clique em `Conversor.bat`, dentro da pasta
-`Conversor de Ficha Financeira`. Não precisa instalar nada nem de internet.
+## Como instalar
+1. Baixe o zip e deixe-o numa pasta de caminho curto, como **Downloads**. Não
+   extraia direto de dentro da pasta do WhatsApp nem de pastas muito fundas: o
+   Windows recusa com **"Caminho muito longo"** (erro 0x80010135).
+2. Clique com o botão direito no zip → **Propriedades** → marque
+   **Desbloquear** → **OK**. Sem isso o Windows 11 mostra
+   **"O Controle de Aplicativo Inteligente bloqueou um arquivo que pode não
+   ser seguro"** ao abrir o programa, e não oferece opção de liberar.
+3. Botão direito no zip → **Extrair tudo** → **Extrair**.
+4. Abra a pasta `Conversor de Ficha Financeira` e dê duplo clique em
+   `Conversor.bat`.
+
+Não precisa instalar nada nem de internet.
 
 ## Requisitos
 - Windows 10/11 64 bits

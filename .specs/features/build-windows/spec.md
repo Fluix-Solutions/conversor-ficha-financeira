@@ -43,7 +43,8 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | Release já existente para a tag | Falhar sem sobrescrever | Um zip publicado não muda por baixo de quem já baixou | n |
 | Retenção do artefato do workflow | 14 dias | O zip permanente é o da Release; o artefato só leva o zip do build para o job de publicação | n |
 | Script de build | O mesmo `construir_portatil.py` roda no CI e num Windows local | Um caminho só de build, sem duplicar lógica | n |
-| Smart App Control com zip baixado da internet | Não é verificável no CI; vira UAT manual numa máquina com SAC ligado antes de divulgar a 1ª Release | O Mark-of-the-Web do download pode mudar a avaliação do SAC — incerto | n |
+| Smart App Control com zip baixado da internet | UAT manual (2026-09-11): o SAC bloqueia o `Conversor.bat` do zip baixado (`.bat` com Mark-of-the-Web está na lista de tipos bloqueados, sem opção de liberar). Com **Propriedades → Desbloquear** no zip antes de extrair, o app abre e converte ficha escaneada. As instruções de uso passam a trazer esse passo | Documentação da Microsoft: remover o MotW é a saída sem assinatura de código; `.bat` não pode ser assinado | y |
+| Caminho longo na extração | Instruir a extrair a partir de uma pasta curta (Downloads); o build falha se alguma entrada do zip passar de 160 caracteres | UAT: extraindo da pasta do WhatsApp deu `0x80010135: Caminho muito longo`. Com o "Extrair tudo" padrão (pasta com o nome do zip, 47 caracteres), sobram ~50 caracteres para a pasta do zip; Downloads usa ~26 | y |
 
 **Open questions:** none - all resolved or logged above (required before the spec is confirmed).
 
@@ -90,6 +91,9 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 3. WHEN a Release é criada THEN the pipeline SHALL escrever nas notas o SHA-256 do zip e os requisitos: Windows 10/11 64 bits, .NET Framework 4.7.2+ e WebView2 Runtime.  <!-- WIN-13 -->
 4. IF já existir uma Release para a tag THEN the pipeline SHALL falhar sem alterar a Release nem o zip existentes.  <!-- WIN-14 -->
 5. The pipeline SHALL dar permissão `contents: write` só ao job que publica a Release; os demais jobs rodam com `contents: read`.  <!-- WIN-15 -->
+6. WHEN a Release é criada THEN the pipeline SHALL escrever nas notas o passo a passo de instalação: deixar o zip numa pasta curta como Downloads, marcar **Desbloquear** nas Propriedades do zip, **Extrair tudo** e abrir `Conversor.bat`, citando as mensagens "Controle de Aplicativo Inteligente" e "Caminho muito longo".  <!-- WIN-26 -->
+7. IF alguma entrada do zip tiver mais de 160 caracteres THEN the build SHALL falhar antes de publicar, citando a entrada e o tamanho.  <!-- WIN-27 -->
+8. The `LEIA-ME.txt` da pasta SHALL explicar o que fazer quando o Windows mostra "Controle de Aplicativo Inteligente bloqueou" (desbloquear o zip e extrair de novo) e "Caminho muito longo" (mover o zip para Downloads).  <!-- WIN-28 -->
 
 **Independent Test**: Enviar a tag `v1.1` (igual a `server.VERSAO`) e ver a Release com o zip e o SHA-256; reenviar o workflow para a mesma tag e ver a falha sem alteração da Release.
 
@@ -182,8 +186,11 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | WIN-23 | P1: Build verificado | T10, T11, T15 | Implementing (lógica e escopo de teste verificados; ramo que publica pendente pós-merge) |
 | WIN-24 | P1: Build verificado | T13, T15 | Verified |
 | WIN-25 | P1: Dependências travadas | T14 | Verified |
+| WIN-26 | P1: Publicação por tag | T17 | Implementing |
+| WIN-27 | P1: Publicação por tag | T18 | Pending |
+| WIN-28 | P1: Publicação por tag | T18 | Pending |
 
-**Coverage:** 25 total, 25 mapped to tasks, 0 unmapped
+**Coverage:** 28 total, 28 mapped to tasks, 0 unmapped
 
 **Regra de status (Verifier, rodada 3):** `Verified` = asserção de teste que mira o valor da spec (morta quando mutada) ou execução real no CI Windows com linha de log citável; evidência só estática vale para ACs declarativos. Caminho de runtime que ainda não executou (só roda após o merge/tag) fica `Implementing` com a nota de pendência — ver `validation.md`.
 

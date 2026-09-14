@@ -9,7 +9,7 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 ---
 
 **Design**: `.specs/features/build-windows/design.md`
-**Status**: Done — Verifier rodada 3: PASS (pendências só pós-merge, ver validation.md)
+**Status**: In Progress (achados do UAT)
 
 ---
 
@@ -71,6 +71,12 @@ T9 → T10 → T11 → T12 → T13 → T14
 
 ```
 T15 → T16
+```
+
+### Phase 6: Achados do UAT com Smart App Control
+
+```
+T17 → T18 → T19
 ```
 
 ---
@@ -507,6 +513,83 @@ T15 → T16
 **Gate**: build
 
 **Commit**: `docs(windows): document the pr trigger and ci-verified ocr`
+
+---
+
+### T17: Passo a passo de instalação nas notas da Release
+
+**What**: `notas_release` traz o passo a passo (Downloads → Desbloquear → Extrair tudo → `Conversor.bat`) e as duas mensagens de erro do Windows.
+**Where**: `release.py`
+**Depends on**: None
+**Reuses**: `release.py:notas_release`
+**Requirement**: WIN-26
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [x] `tests/test_release.py`: notas contêm `Downloads`, `Desbloquear`, `Extrair tudo`, `Conversor.bat`, `Controle de Aplicativo Inteligente` e `Caminho muito longo`, com o passo Desbloquear antes do Extrair tudo
+- [x] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
+
+**Tests**: unit
+**Gate**: quick
+
+**Commit**: `feat(release): add unblock-and-extract steps to the release notes`
+
+---
+
+### T18: LEIA-ME com os dois erros e limite de caminho no zip
+
+**What**: `LEIAME` explica "Controle de Aplicativo Inteligente" e "Caminho muito longo"; `zipar` falha se alguma entrada passar de `LIMITE_CAMINHO = 160` caracteres.
+**Where**: `construir_portatil.py`
+**Depends on**: T17
+**Reuses**: `zipar`, `LEIAME`
+**Requirement**: WIN-27, WIN-28
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] `tests/test_construir.py`: entrada com 161 caracteres → `RuntimeError` citando a entrada e o tamanho; com 160 → zip gerado; o `LEIA-ME.txt` da pasta montada pelo `main` contém `Desbloquear`, `Controle de Aplicativo Inteligente` e `Caminho muito longo`
+- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+- [ ] Gate CI: PR verde (o maior caminho real é 155)
+
+**Tests**: unit
+**Gate**: build
+
+**Commit**: `fix(windows): explain smart app control and long paths, cap zip paths`
+
+---
+
+### T19: README e CLAUDE.md com o procedimento validado
+
+**What**: README (seção da pasta portátil) e CLAUDE.md registram o resultado do UAT e o procedimento Downloads → Desbloquear → Extrair tudo.
+**Where**: `README.md`
+**Depends on**: T18
+**Reuses**: seções da T8/T12/T16
+**Requirement**: WIN-20, WIN-21
+
+**Tools**:
+
+- MCP: NONE
+- Skill: NONE
+
+**Done when**:
+
+- [ ] README: passo a passo de instalação e os dois erros
+- [ ] CLAUDE.md: UAT com SAC (bloqueio do `.bat` com MotW; Desbloquear resolve; caminho longo a partir da pasta do WhatsApp) e o limite de 160
+- [ ] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
+
+**Tests**: none
+**Gate**: build
+
+**Commit**: `docs(windows): document the validated install steps for smart app control`
 
 ---
 

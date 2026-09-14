@@ -85,6 +85,16 @@ def test_notas_trazem_sha256_e_requisitos():
     assert "WebView2" in notas
 
 
+def test_notas_ensinam_desbloquear_antes_de_extrair():
+    """UAT 2026-09-11: sem desbloquear, o Smart App Control barra o .bat; e
+    extraindo de pasta funda dá 'Caminho muito longo'."""
+    notas = release.notas_release("v1.1", "cd" * 32)
+    for termo in ("Downloads", "Desbloquear", "Extrair tudo", "Conversor.bat",
+                  "Controle de Aplicativo Inteligente", "Caminho muito longo"):
+        assert termo in notas, termo
+    assert notas.index("Desbloquear") < notas.index("Extrair tudo")
+
+
 def test_cli_tag_divergente_sai_com_1():
     r = subprocess.run(
         [sys.executable, str(RAIZ / "release.py"), "tag", "--ref-tag", "v9.9"],
