@@ -105,8 +105,9 @@ A v1.1 já gera JSON (motor, CLI e tela web, commit `6c0cfea`), mas no app de de
 | JSONDESK-05 | P1: Planilha — AC 1, 2 | Execute | Implementing |
 | JSONDESK-06 | P1: Build — AC 1 | Execute | Implementing |
 | JSONDESK-07 | P1: Build — AC 2 | Execute | Implementing |
+| JSONDESK-08 | Edge: cancelar o "Salvar como" não baixa nem grava nada | Execute | Implementing |
 
-**Coverage:** 7 total, 7 mapped to steps, 0 unmapped
+**Coverage:** 8 total, 8 mapped to steps, 0 unmapped
 
 ---
 

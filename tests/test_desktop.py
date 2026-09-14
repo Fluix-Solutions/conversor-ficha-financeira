@@ -23,9 +23,7 @@ def salvar(alvo, app_dir, ficha, tmp_path):
         destino = str(saida / escolhido) if escolhido else ""
         out = rodar_no_alvo(alvo, str(TESTS / "_salvar_alvo.py"), str(app_dir),
                             ficha["texto"], formato, destino, "estado")
-        r = json.loads(out.strip().splitlines()[-1])
-        r["pasta"] = sorted(p.name for p in saida.iterdir())
-        return r
+        return json.loads(out.strip().splitlines()[-1])
     return _salvar
 
 
@@ -33,6 +31,9 @@ def test_json_grava_no_caminho_escolhido_sem_virar_xlsx(salvar):
     r = salvar("json", "ficha.json")
     assert r["resultado"] == {"ok": True, "caminho": "ficha.json"}
     assert r["arquivos"] == ["ficha.json"]
+    # Um download e uma gravação: também prova que o registro funciona.
+    assert r["gravacoes"] == ["ficha.json"]
+    assert r["downloads"] == 1
 
 
 def test_json_sem_extensao_ganha_json(salvar):
@@ -79,4 +80,5 @@ def test_xlsx_continua_planilha_e_abre(salvar, ficha):
 def test_cancelar_nao_grava_nada(salvar):
     r = salvar("json", "")
     assert r["resultado"] == {"cancelado": True}
-    assert r["pasta"] == []
+    assert r["gravacoes"] == []
+    assert r["downloads"] == 0

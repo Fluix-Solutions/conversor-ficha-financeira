@@ -8,6 +8,8 @@ recebeu, o que o salvar devolveu, o que foi gravado e o que foi aberto.
 
 DESTINO vazio = usuário cancelou o diálogo.
 """
+import builtins
+import io
 import json
 import os
 import sys
@@ -20,6 +22,7 @@ sys.path.insert(0, app_dir)
 
 import app_desktop  # noqa: E402
 import openpyxl  # noqa: E402
+from flask import request  # noqa: E402
 from webview.util import parse_file_type  # noqa: E402
 
 server = app_desktop.server
@@ -40,6 +43,29 @@ class JanelaFalsa:
         self.pedido = {"save_filename": kw.get("save_filename"),
                        "file_types": list(kw.get("file_types", ()))}
         return destino or None
+
+
+# Todo download do resultado, venha de onde vier. Registrado antes da 1ª
+# requisição: o Flask não aceita before_request depois disso.
+downloads: list[str] = []
+
+
+@server.app.before_request
+def _registrar_download():
+    if request.path.endswith("/arquivo"):
+        downloads.append(request.path)
+
+
+# Toda gravação de arquivo durante o salvar, em qualquer caminho: listar só a
+# pasta escolhida não prova nada quando o diálogo é cancelado.
+gravacoes: list[str] = []
+_open_original = builtins.open
+
+
+def _open_registrando(file, mode="r", *args, **kw):
+    if any(c in mode for c in "wax+"):
+        gravacoes.append(os.path.basename(str(file)))
+    return _open_original(file, mode, *args, **kw)
 
 
 porta = app_desktop._porta_livre()
@@ -64,7 +90,11 @@ assert d["estado"] == "pronto", d
 janela = JanelaFalsa()
 api = app_desktop.Api(base)
 api._window = janela
-resultado = api.salvar(job, d["arquivo_nome"])
+builtins.open = io.open = _open_registrando  # Path.write_* usa io.open
+try:
+    resultado = api.salvar(job, d["arquivo_nome"])
+finally:
+    builtins.open = io.open = _open_original
 if resultado.get("caminho"):
     resultado["caminho"] = Path(resultado["caminho"]).name
 
@@ -82,4 +112,5 @@ if resultado.get("ok"):
 # JSON só em ASCII: ver _converter_alvo.py.
 print(json.dumps({"arquivo_nome": d["arquivo_nome"], "pedido": janela.pedido,
                   "resultado": resultado, "arquivos": arquivos,
-                  "abertos": abertos, "conteudo": conteudo}))
+                  "abertos": abertos, "conteudo": conteudo,
+                  "gravacoes": gravacoes, "downloads": len(downloads)}))
