@@ -24,7 +24,7 @@
 - **Phase / Task**: T1-T19 + correções; Verifier rodada 4 = PASS
 - **Completed**: PR #1 mergeado na `main` (0724aa4); Release **v1.1** publicada com o zip (153,5 MB, sha256 23eff6c9…1c66); provas de produção nos runs 34846003592 (sem publicar), 34846236087 (publicou), 34846508283 (recusou republicar)
 - **In-progress** (file:line): nenhum
-- **Next step**: nada pendente nesta feature — UAT do zip da Release aprovado em 2026-09-14 na máquina com Smart App Control. Ideias adiadas em `context.md` (lançador assinado, log de erro, aviso de WebView2, zip sem `__pycache__`, teste do passo da tag)
+- **Next step**: próxima sessão = investigar a **geração de JSON** (pedida para a v1.2). Relato do usuário em 2026-09-14: "o JSON acho que corrompeu porque não está fazendo" — ainda sem detalhe do que é o JSON, de quem o consome nem da mensagem de erro. Antes de especificar, levantar: (1) qual programa lê o JSON e se ele já existe hoje fora deste repositório; (2) um exemplo de JSON que funciona e um que "corrompeu"; (3) a mensagem/tela do erro; (4) se o JSON substitui ou acompanha o `.xlsx`, e se vale para Serra e Estado, inclusive ficha escaneada. Nada disso existe no código atual: hoje a saída é só `.xlsx` (aba Proventos). Ideias adiadas do build Windows seguem em `.specs/features/build-windows/context.md`
 - **Blockers**: nenhum
 - **Uncommitted files**: nenhum
 - **Branch**: `main`
