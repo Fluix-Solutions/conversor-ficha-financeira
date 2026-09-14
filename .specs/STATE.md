@@ -24,7 +24,7 @@
 - **Phase / Task**: T1-T19 + correções; Verifier rodada 4 = PASS
 - **Completed**: PR #1 mergeado na `main` (0724aa4); Release **v1.1** publicada com o zip (153,5 MB, sha256 23eff6c9…1c66); provas de produção nos runs 34846003592 (sem publicar), 34846236087 (publicou), 34846508283 (recusou republicar)
 - **In-progress** (file:line): nenhum
-- **Next step**: UAT do zip **da Release** (o teste do usuário usou o zip do build) numa máquina com Smart App Control; ideias adiadas em `context.md` (lançador assinado, log de erro, aviso de WebView2, zip sem `__pycache__`, teste do passo da tag)
+- **Next step**: nada pendente nesta feature — UAT do zip da Release aprovado em 2026-09-14 na máquina com Smart App Control. Ideias adiadas em `context.md` (lançador assinado, log de erro, aviso de WebView2, zip sem `__pycache__`, teste do passo da tag)
 - **Blockers**: nenhum
 - **Uncommitted files**: nenhum
 - **Branch**: `main`

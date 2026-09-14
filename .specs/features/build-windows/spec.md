@@ -6,9 +6,9 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 
 ## Goals
 
-- [ ] Gerar a pasta portátil Windows a partir do Mac com um `git push` de tag, sem precisar de uma máquina Windows.
-- [ ] Todo zip publicado passou pela verificação com o Python DA PASTA num Windows real (importações, OCR, conversão de uma ficha fictícia de texto e escaneada).
-- [ ] Dois builds do mesmo commit instalam exatamente as mesmas versões de dependência.
+- [x] Gerar a pasta portátil Windows a partir do Mac com um `git push` de tag, sem precisar de uma máquina Windows.
+- [x] Todo zip publicado passou pela verificação com o Python DA PASTA num Windows real (importações, OCR, conversão de uma ficha fictícia de texto e escaneada).
+- [x] Dois builds do mesmo commit instalam exatamente as mesmas versões de dependência.
 
 ## Out of Scope
 
@@ -202,6 +202,6 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 
 ## Success Criteria
 
-- [ ] Uma tag `vX.Y` enviada do Mac produz uma Release com o zip em menos de 30 minutos, sem intervenção.
-- [ ] O zip da Release abre o app e converte uma ficha escaneada real numa máquina Windows com Smart App Control ligado (UAT manual antes de divulgar a 1ª Release).
-- [ ] Dois builds do mesmo commit registram a mesma lista de pacotes e versões no log.
+- [x] Uma tag `vX.Y` enviada do Mac produz uma Release com o zip em menos de 30 minutos, sem intervenção (v1.1: ~2 min, run 34846236087).
+- [x] O zip da Release abre o app e converte uma ficha escaneada real numa máquina Windows com Smart App Control ligado (UAT manual 2026-09-14, com o zip baixado da Release v1.1: aprovado, seguindo o passo a passo das notas — pasta curta, Desbloquear, Extrair tudo).
+- [x] Dois builds do mesmo commit registram a mesma lista de pacotes e versões no log (runs 34632113906 e 34633772453).
