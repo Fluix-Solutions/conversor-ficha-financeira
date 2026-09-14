@@ -106,6 +106,15 @@ def main(argv: list[str] | None = None) -> int:
     n.add_argument("--zip", required=True, type=Path)
     args = ap.parse_args(argv)
 
+    # As notas têm "→" e acentos; no Windows o console usa cp1252 e o print
+    # morre com UnicodeEncodeError (visto no CI). O destino é sempre um
+    # arquivo/pipe em UTF-8.
+    for fluxo in (sys.stdout, sys.stderr):
+        try:
+            fluxo.reconfigure(encoding="utf-8")
+        except Exception:  # noqa: BLE001 - fluxo sem reconfigure: segue como está
+            pass
+
     try:
         if args.cmd == "tag":
             tag = tag_release(args.ref_tag, versao_app())

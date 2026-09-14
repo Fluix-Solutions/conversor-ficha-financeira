@@ -533,6 +533,7 @@ T17 → T18 → T19
 
 - [x] `tests/test_release.py`: notas contêm `Downloads`, `Desbloquear`, `Extrair tudo`, `Conversor.bat`, `Controle de Aplicativo Inteligente` e `Caminho muito longo`, com o passo Desbloquear antes do Extrair tudo
 - [x] Gate check passes: `.venv/bin/python -m pytest tests -m "not e2e" -q`
+- [x] Saída em UTF-8: no Windows o console é cp1252 e o "→" das notas quebrava o `print` (pego no CI, corrigido em commit próprio)
 
 **Tests**: unit
 **Gate**: quick

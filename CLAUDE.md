@@ -188,6 +188,9 @@ roda (ele executa o `python.exe` da pasta). O build oficial é
   com o `python.exe` da pasta, `platform win32`; zip 153,5 MB).
 - `--python-alvo` vira absoluto com `.absolute()`, **não** `.resolve()`: o
   python de um venv é link simbólico, e segui-lo cai no Python do sistema.
+- `release.py` força **UTF-8** no stdout/stderr: as notas da Release têm "→",
+  que a cp1252 do console do Windows não tem, e o `print` morria com
+  `UnicodeEncodeError` (pegou no CI, não no Mac).
 - Saída de subprocesso no Windows vem na página de código do console e o
   Python embutido (modo isolado pelo `._pth`) **ignora `PYTHONIOENCODING`** →
   o que o alvo imprime para o teste ler é JSON só em ASCII.
