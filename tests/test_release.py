@@ -16,7 +16,7 @@ import release  # noqa: E402
 
 
 def test_versao_app_le_o_server_py():
-    assert release.versao_app(RAIZ / "server.py") == "1.1"
+    assert release.versao_app(RAIZ / "server.py") == "1.2"
 
 
 def test_tag_enviada_igual_a_versao_e_aceita():
@@ -70,7 +70,7 @@ def test_cli_tag_em_outro_commit_sai_com_1():
         capture_output=True, text=True,
     )
     assert ok.returncode == 0
-    assert ok.stdout.strip() == "v1.1"
+    assert ok.stdout.strip() == "v1.2"
 
 
 def test_nome_do_zip():
@@ -102,13 +102,13 @@ def test_cli_tag_divergente_sai_com_1():
         capture_output=True, text=True,
     )
     assert r.returncode == 1
-    assert "9.9" in r.stderr and "1.1" in r.stderr
+    assert "9.9" in r.stderr and "1.2" in r.stderr
     ok = subprocess.run(
         [sys.executable, str(RAIZ / "release.py"), "tag"],
         capture_output=True, text=True,
     )
     assert ok.returncode == 0
-    assert ok.stdout.strip() == "v1.1"
+    assert ok.stdout.strip() == "v1.2"
 
 
 def test_cli_notas_calcula_o_sha256_do_zip(tmp_path):
