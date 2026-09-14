@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import subprocess
 import sys
 from pathlib import Path
@@ -14,9 +15,19 @@ sys.path.insert(0, str(RAIZ))
 
 import release  # noqa: E402
 
+# A versão NÃO fica escrita aqui: quando estava, toda subida de VERSAO
+# derrubava estes testes no CI e a Release não saía (aconteceu na 1.3). O
+# teste continua valendo porque a leitura aqui é independente da do
+# release.py — aqui é um regex simples no arquivo, lá é a função de verdade.
+VERSAO_ATUAL = re.search(
+    r'^VERSAO\s*=\s*"([^"]+)"',
+    (RAIZ / "server.py").read_text(encoding="utf-8"),
+    re.M,
+).group(1)
+
 
 def test_versao_app_le_o_server_py():
-    assert release.versao_app(RAIZ / "server.py") == "1.2"
+    assert release.versao_app(RAIZ / "server.py") == VERSAO_ATUAL
 
 
 def test_tag_enviada_igual_a_versao_e_aceita():
@@ -70,7 +81,7 @@ def test_cli_tag_em_outro_commit_sai_com_1():
         capture_output=True, text=True,
     )
     assert ok.returncode == 0
-    assert ok.stdout.strip() == "v1.2"
+    assert ok.stdout.strip() == f"v{VERSAO_ATUAL}"
 
 
 def test_nome_do_zip():
@@ -102,13 +113,13 @@ def test_cli_tag_divergente_sai_com_1():
         capture_output=True, text=True,
     )
     assert r.returncode == 1
-    assert "9.9" in r.stderr and "1.2" in r.stderr
+    assert "9.9" in r.stderr and VERSAO_ATUAL in r.stderr
     ok = subprocess.run(
         [sys.executable, str(RAIZ / "release.py"), "tag"],
         capture_output=True, text=True,
     )
     assert ok.returncode == 0
-    assert ok.stdout.strip() == "v1.2"
+    assert ok.stdout.strip() == f"v{VERSAO_ATUAL}"
 
 
 def test_cli_notas_calcula_o_sha256_do_zip(tmp_path):
