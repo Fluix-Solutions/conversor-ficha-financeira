@@ -36,7 +36,7 @@ from flask import Flask, Response, jsonify, request, send_file, send_from_direct
 
 from converter import FORMATOS_SAIDA, ORIGENS, ConversaoError, converter, ocr_status
 
-VERSAO = "1.2"
+VERSAO = "1.3"
 MAX_MB = 25
 MIMETIPOS = {
     "xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
