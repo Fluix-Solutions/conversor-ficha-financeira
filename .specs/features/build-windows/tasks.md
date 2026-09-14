@@ -19,8 +19,8 @@ Implement these tasks with the `tlc-spec-driven` skill: **activate it by name an
 
 | Code Layer | Required Test Type | Coverage Expectation | Location Pattern | Run Command |
 | ---------- | ------------------ | -------------------- | ---------------- | ----------- |
-| Regras de Release (`release.py`) | unit | Todos os ramos; 1:1 com WIN-11, WIN-13, WIN-19 + edge case de formato de tag | `tests/test_release.py` | `.venv/bin/python -m pytest tests -m "not e2e" -q` |
-| Funções do build (`construir_portatil.py`) | unit | 1:1 com WIN-03, WIN-10, WIN-12, WIN-16 | `tests/test_construir.py` | `.venv/bin/python -m pytest tests -m "not e2e" -q` |
+| Regras de Release (`release.py`) | unit | Todos os ramos; 1:1 com WIN-11, WIN-13, WIN-19, WIN-26 + edge case de formato de tag e saída em cp1252 | `tests/test_release.py` | `.venv/bin/python -m pytest tests -m "not e2e" -q` |
+| Funções do build (`construir_portatil.py`) | unit | 1:1 com WIN-03, WIN-10, WIN-12, WIN-16, WIN-27, WIN-28 | `tests/test_construir.py` | `.venv/bin/python -m pytest tests -m "not e2e" -q` |
 | Lock de dependências | unit | WIN-16 (versão exata + hash), WIN-17, WIN-18 | `tests/test_lock.py` | `.venv/bin/python -m pytest tests -m "not e2e" -q` |
 | App empacotado (pasta / alvo) | e2e | WIN-04..07, WIN-09: caminho feliz + Descontos ausente + nenhum `CONFERIR` | `tests/test_portatil.py` | Mac: `.venv/bin/python -m pytest tests -q`; CI: `python -m pytest tests -m e2e --python-alvo <pasta>\python\python.exe --app-dir <pasta>` |
 | Workflow (`.github/workflows/windows.yml`) | none (lint) | `actionlint` sem erros; comportamento (WIN-01, 08, 11, 14, 15) provado pela execução no CI | `.github/workflows/*.yml` | `actionlint` |
@@ -559,7 +559,7 @@ T17 → T18 → T19
 
 - [x] `tests/test_construir.py`: entrada com 161 caracteres → `RuntimeError` citando a entrada e o tamanho; com 160 → zip gerado; o `LEIA-ME.txt` da pasta montada pelo `main` contém `Desbloquear`, `Controle de Aplicativo Inteligente` e `Caminho muito longo`
 - [x] Gate check passes: `.venv/bin/python -m pytest tests -q && .venv/bin/python -m py_compile construir_portatil.py release.py && actionlint`
-- [ ] Gate CI: PR verde (o maior caminho real é 155)
+- [x] Gate CI: PR verde (run 34843464216; o maior caminho real é 155)
 
 **Tests**: unit
 **Gate**: build

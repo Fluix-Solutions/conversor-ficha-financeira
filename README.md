@@ -125,7 +125,7 @@ com OCR em velocidade plena (~73 s por ficha escaneada).
 4. Abra a pasta `Conversor de Ficha Financeira` e dê **duplo clique em
    `Conversor.bat`**.
 
-Esses dois passos estão nas notas de cada Release e no `LEIA-ME.txt` da pasta.
+Os passos 1 e 2 estão nas notas de cada Release e no `LEIA-ME.txt` da pasta.
 
 ### Gerar uma versão (de qualquer computador, inclusive Mac)
 
@@ -165,11 +165,10 @@ O que o workflow faz, e por que dá para confiar no zip:
 - roda os testes (`tests/`) **com o Python da própria pasta**: importa tudo,
   converte uma ficha **fictícia** de texto e a mesma ficha escaneada (OCR),
   confere os valores e sobe o `server.py` para ver `"ocr": true`;
+- recusa o zip se algum caminho interno passar de 160 caracteres, para a
+  extração não falhar na máquina do usuário;
 - só publica se tudo passar. Uma Release que já existe **nunca** é
   sobrescrita — para publicar de novo, suba o `VERSAO`.
-
-- recusa o zip se algum caminho interno passar de 160 caracteres, para a
-  extração não falhar na máquina do usuário.
 
 ### Atualizar as dependências da pasta
 

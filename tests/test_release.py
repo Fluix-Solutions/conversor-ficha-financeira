@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import hashlib
+import os
 import subprocess
 import sys
 from pathlib import Path
@@ -111,11 +112,15 @@ def test_cli_tag_divergente_sai_com_1():
 
 
 def test_cli_notas_calcula_o_sha256_do_zip(tmp_path):
+    """Com cp1252 (o console do Windows) o '→' das notas derrubava o print —
+    quem pegou foi o CI. Aqui o teste força essa página de código."""
     z = tmp_path / "x.zip"
     z.write_bytes(b"conteudo qualquer")
     r = subprocess.run(
         [sys.executable, str(RAIZ / "release.py"), "notas", "--tag", "v1.1",
          "--zip", str(z)],
         capture_output=True, text=True, check=True,
+        env={**os.environ, "PYTHONIOENCODING": "cp1252"},
     )
     assert hashlib.sha256(b"conteudo qualquer").hexdigest() in r.stdout
+    assert "→" in r.stdout

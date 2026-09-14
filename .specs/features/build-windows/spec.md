@@ -186,13 +186,15 @@ A versão Windows do conversor é a pasta portátil gerada por `construir_portat
 | WIN-23 | P1: Build verificado | T10, T11, T15 | Implementing (lógica e escopo de teste verificados; ramo que publica pendente pós-merge) |
 | WIN-24 | P1: Build verificado | T13, T15 | Verified |
 | WIN-25 | P1: Dependências travadas | T14 | Verified |
-| WIN-26 | P1: Publicação por tag | T17 | Implementing |
-| WIN-27 | P1: Publicação por tag | T18 | Implementing |
-| WIN-28 | P1: Publicação por tag | T18 | Implementing |
+| WIN-26 | P1: Publicação por tag | T17 | Verified |
+| WIN-27 | P1: Publicação por tag | T18 | Verified |
+| WIN-28 | P1: Publicação por tag | T18 | Verified |
 
 **Coverage:** 28 total, 28 mapped to tasks, 0 unmapped
 
 **Regra de status (Verifier, rodada 3):** `Verified` = asserção de teste que mira o valor da spec (morta quando mutada) ou execução real no CI Windows com linha de log citável; evidência só estática vale para ACs declarativos. Caminho de runtime que ainda não executou (só roda após o merge/tag) fica `Implementing` com a nota de pendência — ver `validation.md`.
+
+**Rodada 4 (Verifier):** WIN-26/27/28 `Verified` — asserções em `tests/test_release.py:91-95` e `tests/test_construir.py:88-93`, `:165-168`, todas mortas quando mutadas, mais conferência do **zip real** que o CI produziu em HEAD (run 34843464216, artefato 10346614659, `sha256` igual ao do log): raiz única, maior entrada com 155 caracteres e `LEIA-ME.txt` só ASCII com as duas mensagens de erro. WIN-12, WIN-13, WIN-20 e WIN-21 reconfirmados sem regressão. Os 5 ACs de execução pendente (WIN-01, WIN-11, WIN-14, WIN-22 e o ramo "publica" do WIN-23) não mudaram: o workflow não foi tocado nesta rodada.
 
 ---
 

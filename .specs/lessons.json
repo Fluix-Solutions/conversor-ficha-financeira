@@ -3,7 +3,7 @@
   "promote_threshold": 2,
   "window_days": 45,
   "quarantine_threshold": 2,
-  "next_id": 9,
+  "next_id": 11,
   "lessons": [
     {
       "id": "L-001",
@@ -148,6 +148,42 @@
       ],
       "created": "2026-09-11T18:43:36Z",
       "last_seen": "2026-09-11T18:43:36Z"
+    },
+    {
+      "id": "L-009",
+      "key": "surviving_mutant::pin the output encoding in the test when a cli prints non ascii so the host locale does not decide whether the test passes",
+      "text": "Pin the output encoding in the test when a CLI prints non-ASCII, so the host locale does not decide whether the test passes",
+      "signal": "surviving_mutant",
+      "scope": "cli",
+      "status": "candidate",
+      "features": [
+        "build-windows"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "M18 release.py:112-116 (WIN-26; tests/test_release.py:113-121) (cli)"
+      ],
+      "created": "2026-09-14T12:47:11Z",
+      "last_seen": "2026-09-14T12:47:11Z"
+    },
+    {
+      "id": "L-010",
+      "key": "gate_fail::force utf 8 on stdout and stderr in any cli that prints non ascii because the windows console defaults to a legacy code page and the print raises",
+      "text": "Force UTF-8 on stdout and stderr in any CLI that prints non-ASCII, because the Windows console defaults to a legacy code page and the print raises",
+      "signal": "gate_fail",
+      "scope": "cli",
+      "status": "candidate",
+      "features": [
+        "build-windows"
+      ],
+      "recurrence": 1,
+      "harmful": 0,
+      "evidence": [
+        "run 34843217833 tests/test_release.py::test_cli_notas_calcula_o_sha256_do_zip (WIN-26; release.py:112-116) (cli)"
+      ],
+      "created": "2026-09-14T12:47:18Z",
+      "last_seen": "2026-09-14T12:47:18Z"
     }
   ]
 }

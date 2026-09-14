@@ -62,6 +62,18 @@ Seen once or not yet corroborated. Tracked, not trusted.
 - evidence: M13 .github/workflows/windows.yml:88 (WIN-22/23/24; M14/M15 :78) (ci-workflow)
 - last seen: 2026-09-11T18:43:36Z
 
+### L-009 - Pin the output encoding in the test when a CLI prints non-ASCII, so the host locale does not decide whether the test passes
+- signal: `surviving_mutant` · recurrence: 1 feature(s) · scope: `cli` · harmful: 0
+- features: build-windows
+- evidence: M18 release.py:112-116 (WIN-26; tests/test_release.py:113-121) (cli)
+- last seen: 2026-09-14T12:47:11Z
+
+### L-010 - Force UTF-8 on stdout and stderr in any CLI that prints non-ASCII, because the Windows console defaults to a legacy code page and the print raises
+- signal: `gate_fail` · recurrence: 1 feature(s) · scope: `cli` · harmful: 0
+- features: build-windows
+- evidence: run 34843217833 tests/test_release.py::test_cli_notas_calcula_o_sha256_do_zip (WIN-26; release.py:112-116) (cli)
+- last seen: 2026-09-14T12:47:18Z
+
 ## Quarantined (failed when applied - ignore)
 
 A confirmed lesson that recurred alongside failure. Kept for the maintainer to review.

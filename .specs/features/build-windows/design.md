@@ -187,5 +187,8 @@ A rubrica de Descontos (`0500 IMPOSTO`) está na ficha e **não** pode aparecer 
 | 1º run no CI: `proxy-tools` só tem sdist e o Python embutido ignora `PYTHONPATH` | `setuptools` no lock (`requirements-build-windows.txt`), instalado antes; resto com `--no-build-isolation` | `construir_portatil.py`, lock |
 | Verifier 2 (G1): checagem da tag quebraria PRs depois da 1ª Release | Checagem só em execução que publica (`PUBLICA`) | workflow |
 | `.resolve()` no `--python-alvo` caía no Python do sistema | `.absolute()` | `tests/conftest.py` |
+| UAT com Smart App Control: `.bat` com Mark-of-the-Web é bloqueado sem opção de liberar | Passo **Desbloquear** nas notas da Release e no `LEIA-ME.txt` | `release.py`, `construir_portatil.py` |
+| UAT: extrair de pasta funda dá `0x80010135` | `zipar` recusa entrada acima de `LIMITE_CAMINHO` (160; maior real 155) e as instruções mandam usar Downloads | `construir_portatil.py` |
+| CI: `release.py notas` morria com `UnicodeEncodeError` no `→` (console cp1252) | `sys.stdout/stderr.reconfigure(encoding="utf-8")`, com teste que força cp1252 | `release.py`, `tests/test_release.py` |
 
 O diagrama acima continua valendo; o passo da tag só consulta o commit da tag quando a execução publica.
