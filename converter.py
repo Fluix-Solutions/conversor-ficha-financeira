@@ -142,6 +142,18 @@ def agrupar_linhas(itens, key_top, y_tol: float = 2.5):
 # Layout A - Sistema FPFF902 (recente)
 # ----------------------------------------------------------------------------
 def _pagina_formato_a(page, avisos: list[str]):
+    """Uma página pode trazer mais de uma seção de ganhos: "Proventos" (a
+    principal) e, depois dela, "Vantagens" (benefícios à parte, ex.: Salário
+    Família) — cada uma fechada pelo próprio "TOTAL:" ("TOTAL:Proventos" /
+    "TOTAL:Vantagens"). Também pode haver DOIS VÍNCULOS (contratos
+    concorrentes) cabendo na mesma folha, cada um com seu próprio
+    "Proventos...TOTAL:Proventos". Por isso os marcadores são pareados numa
+    máquina de estados (abre no "Proventos"/"Vantagens", fecha no "TOTAL:"
+    seguinte) em vez de pegar só a última ocorrência da página — pegar só a
+    última descartava em silêncio tanto um vínculo anterior quanto a seção
+    Vantagens quando ela vinha antes do fechamento usado como referência.
+    Todas as seções encontradas somam no mesmo bloco: o resultado final da
+    planilha é o mesmo quer estejam em blocos separados ou juntos."""
     words = page.extract_words(use_text_flow=False)
     if not words:
         return None
@@ -162,50 +174,60 @@ def _pagina_formato_a(page, avisos: list[str]):
         return None  # página de continuação (sem a grade de meses)
     x_max = max(centros.values()) + 22
 
-    y_ini = y_fim = None
+    faixas: list[tuple[float, float]] = []
+    y_ini = None
     for grupo in linhas:
         plano = "".join(w["text"] for w in sorted(grupo, key=lambda w: w["x0"]))
         y = grupo[0]["top"]
-        if plano == "Proventos" and min(w["x0"] for w in grupo) < 60:
-            y_ini = y
+        if plano in ("Proventos", "Vantagens") and min(w["x0"] for w in grupo) < 60:
+            if y_ini is None:
+                y_ini = y
         elif plano.startswith("TOTAL:Proventos") or plano.startswith("TOTAL:Vantagens"):
-            y_fim = y
-    if y_ini is None or y_fim is None:
+            if y_ini is not None:
+                faixas.append((y_ini, y))
+            y_ini = None
+    if not faixas:
         return None
-
-    corpo = [w for w in words if y_ini < w["top"] < y_fim]
-    linhas = agrupar_linhas(corpo, lambda w: w["top"])
 
     dados = {mes: {} for mes in MESES}
     ordem: list[str] = []
-    codigo_atual = nome_atual = None
-    for linha in linhas:
-        linha = sorted(linha, key=lambda w: w["x0"])
-        textos = [w["text"] for w in linha]
-        if textos and CODIGO_RE.match(textos[0]):
-            codigo_atual = textos[0]
-            bruto = limpar_nome(" ".join(textos[1:]))
-            nome_atual = RUBRICAS_CANONICAS.get(codigo_atual, bruto)
-            if "?" in nome_atual:
-                avisos.append(f"Nome incompleto (acento): {codigo_atual} '{nome_atual}'.")
+    for y_ini, y_fim in faixas:
+        corpo = [w for w in words if y_ini < w["top"] < y_fim]
+        codigo_atual = nome_atual = None
+        for linha in agrupar_linhas(corpo, lambda w: w["top"]):
+            linha = sorted(linha, key=lambda w: w["x0"])
+            textos = [w["text"] for w in linha]
+            if textos and CODIGO_RE.match(textos[0]):
+                codigo_atual = textos[0]
+                bruto = limpar_nome(" ".join(textos[1:]))
+                nome_atual = RUBRICAS_CANONICAS.get(codigo_atual, bruto)
+                if "?" in nome_atual:
+                    avisos.append(f"Nome incompleto (acento): {codigo_atual} '{nome_atual}'.")
+                coluna = _coluna(codigo_atual, nome_atual)
+                if coluna not in ordem:
+                    ordem.append(coluna)
+                continue
+            if codigo_atual is None:
+                continue
             coluna = _coluna(codigo_atual, nome_atual)
-            if coluna not in ordem:
-                ordem.append(coluna)
-            continue
-        if codigo_atual is None:
-            continue
-        coluna = _coluna(codigo_atual, nome_atual)
-        for w in linha:
-            if not VALOR_RE.match(w["text"]):
-                continue
-            xc = (w["x0"] + w["x1"]) / 2
-            if xc > x_max:
-                continue
-            idx = min(centros, key=lambda i: abs(centros[i] - xc))
-            if abs(centros[idx] - xc) > 20:
-                continue
-            dados[MESES[idx]][coluna] = dados[MESES[idx]].get(coluna, 0.0) + parse_valor(w["text"])
+            for w in linha:
+                if not VALOR_RE.match(w["text"]):
+                    continue
+                xc = (w["x0"] + w["x1"]) / 2
+                if xc > x_max:
+                    continue
+                idx = min(centros, key=lambda i: abs(centros[i] - xc))
+                if abs(centros[idx] - xc) > 20:
+                    continue
+                dados[MESES[idx]][coluna] = dados[MESES[idx]].get(coluna, 0.0) + parse_valor(w["text"])
 
+    if not ordem:
+        return None
+    if len(faixas) > 1:
+        avisos.append(
+            f"Ano {ano}: encontrei {len(faixas)} seções de ganhos nesta página "
+            "(mais de um vínculo e/ou seção Vantagens) — todas somadas."
+        )
     return {"ano": ano, "matricula": matricula, "dados": dados, "ordem": ordem}
 
 
